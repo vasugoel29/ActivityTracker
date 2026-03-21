@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { parseBulkLogs } from '../utils/parser';
-import { db } from '../db/db';
+import { supabase } from '../db/supabase';
+import { triggerOptimisticRefetch } from '../hooks/useSupabase';
 import { FileText, Check } from 'lucide-react';
+import { useToast } from './Toaster';
 
 export function BulkLoggerModal({ isOpen, onClose }) {
+  const toast = useToast();
   const [text, setText] = useState('');
   
   // Format today's date for standard <input type="date">
@@ -12,28 +14,36 @@ export function BulkLoggerModal({ isOpen, onClose }) {
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const handleSave = async () => {
-    // Base date is explicitly given by user
     const baseDate = new Date(selectedDate);
     const logsToSave = parseBulkLogs(text, baseDate);
     
-    if (logsToSave.length === 0) return;
+    if (logsToSave.length === 0) {
+      toast.error('Could not parse any valid logs from text.');
+      return;
+    }
 
-    for (const log of logsToSave) {
-      await db.logs.add({
-        id: crypto.randomUUID(),
+    try {
+      const formattedLogs = logsToSave.map(log => ({
         start_time: log.start_time,
         end_time: log.end_time,
         activity: log.activity,
         life_area: 'untracked',
         energy_level: 2,
-        notes: '',
-        created_at: Date.now(),
-        updated_at: Date.now()
-      });
+        created_at: Date.now()
+      }));
+
+      const { error } = await supabase.from('logs').insert(formattedLogs);
+      
+      if (error) throw error;
+      triggerOptimisticRefetch('logs');
+      
+      toast.success(`${formattedLogs.length} activities logged!`);
+      setText('');
+      onClose();
+    } catch (error) {
+       console.error(error);
+       toast.error(error.message || 'Failed to sync logs to database');
     }
-    
-    setText('');
-    onClose();
   };
 
   return (

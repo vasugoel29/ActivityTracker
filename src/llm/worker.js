@@ -1,4 +1,4 @@
-import { db } from '../db/db';
+import { supabase } from '../db/supabase';
 
 const buildPrompt = (job) => {
   const { type } = job;
@@ -279,10 +279,29 @@ ${payload}
 };
 
 export async function processNextJob() {
-  const job = await db.llm_jobs.where('status').equals('pending').first();
+  const { data: job } = await supabase.from('llm_jobs').select('*').eq('status', 'pending').limit(1).maybeSingle();
   if (!job) return;
 
-  await db.llm_jobs.update(job.id, { status: 'processing' });
+  await supabase.from('llm_jobs').update({ status: 'processing' }).eq('id', job.id);
+
+  if (job.meta && !job.meta.end_date && job.meta.start_date) {
+     const startD = new Date(job.meta.start_date);
+     if (job.type === 'daily_report') {
+        job.meta.end_date = startD.toISOString();
+     } else if (job.type === 'weekly_report') {
+        const endD = new Date(startD);
+        endD.setDate(endD.getDate() + 6);
+        job.meta.end_date = endD.toISOString();
+     } else if (job.type === 'monthly_report') {
+        const endD = new Date(startD);
+        endD.setMonth(endD.getMonth() + 1);
+        endD.setDate(0);
+        job.meta.end_date = endD.toISOString();
+     }
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s offline timeout
 
   try {
     const response = await fetch('http://127.0.0.1:11434/api/generate', {
@@ -292,32 +311,48 @@ export async function processNextJob() {
         model: 'mistral', 
         prompt: buildPrompt(job),
         stream: false
-      })
+      }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) throw new Error('Ollama connection failed');
 
     const data = await response.json();
     
-    await db.reports.add({
-      id: crypto.randomUUID(),
+    await supabase.from('reports').insert([{
       type: job.type,
       start_date: job.meta?.start_date,
       end_date: job.meta?.end_date,
       content: data.response,
-      score: 50, // The dynamic parser handles displaying the real score extracted from text
+      score: 50,
       created_at: Date.now()
-    });
+    }]);
 
-    await db.llm_jobs.update(job.id, { status: 'completed' });
+    await supabase.from('llm_jobs').update({ status: 'completed' }).eq('id', job.id);
 
   } catch (error) {
-    await db.llm_jobs.update(job.id, { status: 'failed', error: error.message });
+    if (error.name === 'AbortError') {
+       await supabase.from('llm_jobs').update({ status: 'failed', error: 'Ollama model timeout (60s)' }).eq('id', job.id);
+    } else {
+       await supabase.from('llm_jobs').update({ status: 'failed', error: error.message }).eq('id', job.id);
+    }
   }
 }
 
+let workerTimeoutId = null;
 export function startWorker() {
   if (typeof window !== 'undefined') {
-    setInterval(processNextJob, 5000);
+    const loop = async () => {
+      try {
+        await processNextJob();
+      } catch (e) {
+        console.error(e);
+      }
+      workerTimeoutId = setTimeout(loop, 5000);
+    };
+    loop();
   }
 }
+

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useReportsByType, useJobsByType, requestReport } from '../hooks/useReports';
-import { db } from '../db/db';
+import { buildReportPayload } from '../utils/payloadBuilder';
 import { Bot, RefreshCw, AlertCircle, Clock, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
-import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths } from 'date-fns';
 import { useToast } from './Toaster';
 import { motion } from 'framer-motion';
 
@@ -42,37 +42,29 @@ export function Reports() {
        start = startOfDay(currentDate).getTime();
        end = endOfDay(currentDate).getTime();
     } else if (activeTab === 'weekly_report') {
-       start = startOfDay(subDays(currentDate, 6)).getTime();
-       end = endOfDay(currentDate).getTime();
+       start = startOfWeek(currentDate, { weekStartsOn: 1 }).getTime();
+       end = endOfWeek(currentDate, { weekStartsOn: 1 }).getTime();
     } else if (activeTab === 'monthly_report') {
        start = startOfMonth(currentDate).getTime();
        end = endOfMonth(currentDate).getTime();
     }
-    
-    const logs = await db.logs.where('start_time').between(start, end).toArray();
-    const expenses = await db.expenses.where('timestamp').between(start, end).toArray();
-    const allHabits = await db.habits.toArray();
-    const habitLogs = await db.habit_logs.where('timestamp').between(start, end).toArray();
-    
-    if (logs.length === 0 && expenses.length === 0 && habitLogs.length === 0) {
-      toast.error('No activities or logs for this period to analyze.');
+    try {
+      const result = await buildReportPayload(start, end);
+      payload = result.payload;
+      
+      if (result.isEmpty) {
+        toast.error('No activities or logs for this period to analyze.');
+        return;
+      }
+      
+      await requestReport(payload, activeTab, { start_date: currentDate.toISOString() });
+      toast.success(`${tabs.find(t => t.id === activeTab).label} Report generation queued! Check the Job Tracker.`);
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Failed to submit report parameters.');
+    } finally {
       setLoading(false);
-      return;
     }
-    
-    payload = JSON.stringify({
-      TIMELINE_LOGS: logs.map(l => ({
-        activity: l.activity,
-        time: `${new Date(l.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`,
-        date: new Date(l.start_time).toLocaleDateString()
-      })),
-      EXPENSES_LOGGED: expenses.map(e => ({ amount: e.amount, category: e.category, date: e.date_string })),
-      HABITS_COMPLETED: habitLogs.map(hl => ({ habit: allHabits.find(h => h.id === hl.habit_id)?.name || 'Unknown', date: hl.date_string }))
-    }, null, 2);
-    
-    await requestReport(payload, activeTab, { start_date: currentDate.toISOString() });
-    toast.success(`${tabs.find(t => t.id === activeTab).label} Report generation queued! Check the Job Tracker.`);
-    setLoading(false);
   };
 
   const isGenerating = activeJobs.some(j => j.status === 'pending' || j.status === 'processing') || loading;
@@ -85,11 +77,12 @@ export function Reports() {
       try {
           if (type === 'daily_report') return format(d, 'EEEE, MMM do');
           if (type === 'weekly_report') {
-              const dStart = subDays(d, 6);
-              if (dStart.getMonth() === d.getMonth()) {
-                  return `${format(dStart, 'd')} - ${format(d, 'd MMM')}`;
+              const dStart = startOfWeek(d, { weekStartsOn: 1 });
+              const dEnd = endOfWeek(d, { weekStartsOn: 1 });
+              if (dStart.getMonth() === dEnd.getMonth()) {
+                  return `${format(dStart, 'd')} - ${format(dEnd, 'd MMM')}`;
               } else {
-                  return `${format(dStart, 'd MMM')} - ${format(d, 'd MMM')}`;
+                  return `${format(dStart, 'd MMM')} - ${format(dEnd, 'd MMM')}`;
               }
           }
           if (type === 'monthly_report') return format(d, 'MMMM yyyy');
@@ -113,14 +106,20 @@ export function Reports() {
       const scoreMatch = content.match(/Life Score[\s\S]*?(\d+)/i);
       if (scoreMatch) discoveredScore = parseInt(scoreMatch[1], 10);
       
+      let skipNext = false;
       const lines = content.split('\n');
       for (let i = 0; i < lines.length; i++) {
+        if (skipNext) { 
+           skipNext = false; 
+           continue; 
+        }
+        
         let line = lines[i].trim();
         if (!line) continue;
         
         if (line.match(/^\*?\s*\*?(Daily|Weekly|Monthly)\s+Life\s+(Report|Audit)\b/i)) continue;
         if (line.match(/^#+\s*Life Score/i)) {
-           if (lines[i+1]?.trim().match(/^\d+/)) i++; 
+           if (lines[i+1]?.trim().match(/^\d+/)) skipNext = true; 
            continue;
         }
         if (line.match(/^#+\s*Pillar (Breakdown|Averages|Scores)/i)) continue;
@@ -174,7 +173,11 @@ export function Reports() {
       </div>
 
       <div className="flex justify-between items-center mb-6 bg-[#0B0B0F] border border-gray-800 rounded-2xl p-2 shadow-inner">
-        <button onClick={() => setCurrentDate(subDays(currentDate, 1))} className="p-2 text-gray-400 hover:text-white transition rounded-xl hover:bg-gray-800/50">
+        <button onClick={() => {
+            if (activeTab === 'weekly_report') setCurrentDate(subDays(currentDate, 7));
+            else if (activeTab === 'monthly_report') setCurrentDate(subMonths(currentDate, 1));
+            else setCurrentDate(subDays(currentDate, 1));
+        }} className="p-2 text-gray-400 hover:text-white transition rounded-xl hover:bg-gray-800/50">
            <ChevronLeft size={20} />
         </button>
         <div className="text-center">
@@ -182,7 +185,15 @@ export function Reports() {
           <p className="text-sm font-bold text-gray-200">{renderDateLabel(currentDate.toISOString(), activeTab)}</p>
         </div>
         <button 
-           onClick={() => setCurrentDate(addDays(currentDate, 1))} 
+           onClick={() => {
+              let nextD;
+              if (activeTab === 'weekly_report') nextD = addDays(currentDate, 7);
+              else if (activeTab === 'monthly_report') nextD = addMonths(currentDate, 1);
+              else nextD = addDays(currentDate, 1);
+              
+              if (nextD > new Date()) nextD = new Date();
+              setCurrentDate(nextD);
+           }} 
            disabled={isToday}
            className={`p-2 transition rounded-xl ${isToday ? 'text-gray-800 cursor-not-allowed' : 'text-gray-400 hover:text-white hover:bg-gray-800/50'}`}
         >

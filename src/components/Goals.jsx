@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { db } from '../db/db';
+
 import { useHabits, useHabitLogs, addHabit, deleteHabit, toggleDailyHabit, logHabitInstance, removeLastHabitLog } from '../hooks/useHabits';
 import { Plus, Check, ChevronLeft, ChevronRight, X, Target, Trash2, Minus } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, subDays, addDays, isSameDay } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, subDays, addDays, isSameDay, parseISO } from 'date-fns';
 import { useToast } from './Toaster';
 
 export function Goals() {
@@ -11,6 +11,7 @@ export function Goals() {
   
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const getProgress = (habit) => {
       const type = habit.frequency_type;
@@ -24,7 +25,7 @@ export function Goals() {
           const end = endOfWeek(currentDate, { weekStartsOn: 1 });
           relevantLogs = logs.filter(l => {
               if (l.habit_id !== habit.id) return false;
-              const logDate = new Date(l.date_string);
+              const logDate = parseISO(l.date_string);
               return logDate >= start && logDate <= end;
           });
       } else if (type.includes('monthly')) {
@@ -32,7 +33,7 @@ export function Goals() {
           const end = endOfMonth(currentDate);
           relevantLogs = logs.filter(l => {
               if (l.habit_id !== habit.id) return false;
-              const logDate = new Date(l.date_string);
+              const logDate = parseISO(l.date_string);
               return logDate >= start && logDate <= end;
           });
       }
@@ -137,9 +138,7 @@ export function Goals() {
                     </div>
 
                     <button 
-                       onClick={() => {
-                          if (confirm('Delete this habit completely?')) deleteHabit(habit.id);
-                       }}
+                       onClick={() => setDeleteConfirmId(habit.id)}
                        className="absolute top-2 right-2 p-1.5 text-gray-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-md bg-[#0B0B0F]"
                     >
                        <Trash2 size={12} />
@@ -151,6 +150,27 @@ export function Goals() {
       </div>
 
       {isAddModalOpen && <AddHabitModal onClose={() => setIsAddModalOpen(false)} />}
+      
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#12121A] p-6 rounded-3xl border border-gray-800 shadow-2xl max-w-sm w-full">
+            <h3 className="text-xl font-bold text-white mb-2">Delete Habit?</h3>
+            <p className="text-gray-500 text-sm mb-6">This action will erase the habit constraint fully.</p>
+            <div className="flex justify-end gap-3">
+               <button onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 font-bold text-gray-400 hover:text-white transition">Cancel</button>
+               <button 
+                 onClick={async () => {
+                   await deleteHabit(deleteConfirmId);
+                   setDeleteConfirmId(null);
+                 }} 
+                 className="px-4 py-2 font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-xl transition"
+               >
+                 Delete
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -163,9 +183,13 @@ function AddHabitModal({ onClose }) {
 
   const handleSave = async () => {
     if (!name.trim()) return toast.error("Habit name is required");
-    await addHabit({ name: name.trim(), frequency_type: type, target_count: target });
-    toast.success("Habit constraint added!");
-    onClose();
+    try {
+      await addHabit({ name: name.trim(), frequency_type: type, target_count: target });
+      toast.success("Habit constraint added!");
+      onClose();
+    } catch (error) {
+      toast.error(error.message || "Failed to add habit");
+    }
   };
 
   const isMultiple = ['multiple_daily', 'weekly', 'monthly'].includes(type); // Weekly/Monthly by default imply multiple hits across days
@@ -217,9 +241,12 @@ function AddHabitModal({ onClose }) {
                       type="number" 
                       min="2" 
                       max="100"
-                      value={target} 
-                      onChange={e => setTarget(parseInt(e.target.value, 10) || 1)} 
-                      className="w-24 bg-[#0B0B0F] border border-gray-800 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-[#818cf8] text-center font-bold"
+                       value={target} 
+                       onChange={e => {
+                          const parsed = parseInt(e.target.value, 10);
+                          setTarget(Number.isNaN(parsed) ? 2 : Math.max(parsed, 2));
+                       }} 
+                       className="w-24 bg-[#0B0B0F] border border-gray-800 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-[#818cf8] text-center font-bold"
                    />
                    <span className="text-gray-500 font-bold text-sm">
                       {type === 'multiple_daily' ? 'completions per day' : type === 'weekly' ? 'times out of the week' : 'times over the month'}

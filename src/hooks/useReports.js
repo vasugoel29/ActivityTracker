@@ -1,28 +1,20 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db/db';
+import { useSupabase } from './useSupabase';
+import { supabase } from '../db/supabase';
 
 export function useReportsByType(type) {
-    return useLiveQuery(async () => {
-        const reports = await db.reports.where('type').equals(type).toArray();
-        return reports.sort((a,b) => b.created_at - a.created_at);
-    }, [type]);
+  return useSupabase('reports', (q) => q.eq('type', type).order('created_at', { ascending: false }), [type]);
 }
 
 export function useJobsByType(type) {
-    return useLiveQuery(async () => {
-        const jobs = await db.llm_jobs.where('type').equals(type).toArray();
-        return jobs.sort((a,b) => b.created_at - a.created_at);
-    }, [type]);
+  return useSupabase('llm_jobs', (q) => q.eq('type', type).order('created_at', { ascending: false }), [type]);
 }
 
-export async function requestReport(payloadStr, type = 'daily_report', meta = {}) {
-    await db.llm_jobs.add({
-        id: crypto.randomUUID(),
-        type: type,
-        payload: payloadStr,
-        status: 'pending',
-        meta: meta,
-        created_at: Date.now(),
-        updated_at: Date.now()
-    });
+export async function requestReport(payloadText, type, meta = {}) {
+  await supabase.from('llm_jobs').insert([{
+    type,
+    status: 'pending',
+    payload: payloadText,
+    meta,
+    created_at: Date.now()
+  }]);
 }

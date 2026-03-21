@@ -7,6 +7,7 @@ import { useToast } from './Toaster';
 export function Dashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   
   const dateStr = format(currentDate, 'yyyy-MM-dd');
   const expenses = useExpensesByDate(dateStr) || [];
@@ -91,14 +92,12 @@ export function Dashboard() {
                      </div>
                   </div>
                   
-                  <div className="flex items-center flex-col items-end gap-2">
+                  <div className="flex flex-col items-end gap-2">
                      <span className="font-black text-white text-lg tabular-nums tracking-tight">
                         ₹{parseFloat(exp.amount).toFixed(2)}
                      </span>
                      <button 
-                        onClick={() => {
-                           if (confirm('Delete transaction?')) deleteExpense(exp.id);
-                        }}
+                        onClick={() => setDeleteConfirmId(exp.id)}
                         className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                      >
                         <Trash2 size={14} />
@@ -110,6 +109,27 @@ export function Dashboard() {
       </div>
 
       {isAddModalOpen && <AddExpenseModal dateStr={dateStr} onClose={() => setIsAddModalOpen(false)} />}
+      
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#12121A] p-6 rounded-3xl border border-gray-800 shadow-2xl max-w-sm w-full">
+            <h3 className="text-xl font-bold text-white mb-2">Delete Transaction?</h3>
+            <p className="text-gray-500 text-sm mb-6">This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+               <button onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 font-bold text-gray-400 hover:text-white transition">Cancel</button>
+               <button 
+                 onClick={async () => {
+                   await deleteExpense(deleteConfirmId);
+                   setDeleteConfirmId(null);
+                 }} 
+                 className="px-4 py-2 font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-xl transition"
+               >
+                 Delete
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -124,15 +144,19 @@ function AddExpenseModal({ dateStr, onClose }) {
     if (!amount || parseFloat(amount) <= 0) return toast.error("Valid amount required");
     if (!category.trim()) return toast.error("Category is required");
 
-    await addExpense({ 
-       amount: parseFloat(amount), 
-       category: category.trim(), 
-       description: description.trim(),
-       dateString: dateStr 
-    });
-    
-    toast.success("Transaction recorded");
-    onClose();
+    try {
+      await addExpense({ 
+         amount: parseFloat(amount), 
+         category: category.trim(), 
+         description: description.trim(),
+         dateString: dateStr 
+      });
+      
+      toast.success("Transaction recorded");
+      onClose();
+    } catch (error) {
+      toast.error(error.message || "Failed to log transaction");
+    }
   };
 
   const commonCategories = ["Food", "Transport", "Shopping", "Entertainment", "Utilities", "Health", "Other"];

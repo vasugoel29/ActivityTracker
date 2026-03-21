@@ -1,54 +1,61 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db/db';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
+import { useSupabase, triggerOptimisticRefetch } from './useSupabase';
+import { supabase } from '../db/supabase';
 
 export function useHabits() {
-  return useLiveQuery(() => db.habits.orderBy('created_at').toArray());
+  return useSupabase('habits', (q) => q.order('created_at', { ascending: true }));
 }
 
 export function useHabitLogs() {
-  return useLiveQuery(() => db.habit_logs.toArray());
+  return useSupabase('habit_logs');
 }
 
-export async function addHabit({ name, frequency_type, target_count }) {
-  await db.habits.add({
-    id: crypto.randomUUID(),
-    name,
-    frequency_type, 
-    target_count: parseInt(target_count, 10) || 1,
-    created_at: Date.now()
-  });
+export async function addHabit(habit) {
+  const { error } = await supabase.from('habits').insert([{ ...habit, id: crypto.randomUUID(), created_at: Date.now() }]);
+  if (error) throw error;
+  triggerOptimisticRefetch('habits');
 }
 
 export async function deleteHabit(id) {
-  await db.habits.delete(id);
-  await db.habit_logs.where('habit_id').equals(id).delete();
+  const { error } = await supabase.from('habits').delete().eq('id', id);
+  if (error) throw error;
+  triggerOptimisticRefetch('habits');
+  triggerOptimisticRefetch('habit_logs');
 }
 
 export async function toggleDailyHabit(habitId, dateString) {
-  const existing = await db.habit_logs.where('[habit_id+date_string]').equals([habitId, dateString]).first();
+  const { data: existing, error: selectError } = await supabase.from('habit_logs').select('id').eq('habit_id', habitId).eq('date_string', dateString).maybeSingle();
+  if (selectError) throw selectError;
+
   if (existing) {
-     await db.habit_logs.delete(existing.id);
+    const { error: deleteError } = await supabase.from('habit_logs').delete().eq('id', existing.id);
+    if (deleteError) throw deleteError;
   } else {
-     await db.habit_logs.add({
-        id: crypto.randomUUID(),
+     const { error: insertError } = await supabase.from('habit_logs').insert([{
         habit_id: habitId,
         date_string: dateString,
         timestamp: Date.now()
-     });
+     }]);
+     if (insertError) throw insertError;
   }
+  triggerOptimisticRefetch('habit_logs');
 }
 
 export async function logHabitInstance(habitId, dateString) {
-    await db.habit_logs.add({
-        id: crypto.randomUUID(),
+    await supabase.from('habit_logs').insert([{
         habit_id: habitId,
         date_string: dateString,
         timestamp: Date.now()
-    });
+    }]);
 }
 
 export async function removeLastHabitLog(habitId, dateString) {
-    const last = await db.habit_logs.where('[habit_id+date_string]').equals([habitId, dateString]).first();
-    if (last) await db.habit_logs.delete(last.id);
+    const { data: last } = await supabase.from('habit_logs')
+        .select('id')
+        .eq('habit_id', habitId)
+        .eq('date_string', dateString)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+        
+    if (last) await supabase.from('habit_logs').delete().eq('id', last.id);
 }

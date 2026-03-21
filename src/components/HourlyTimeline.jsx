@@ -47,8 +47,10 @@ export function HourlyTimeline() {
         {hoursList.map(h => {
            const slotStart = new Date(currentDate);
            slotStart.setHours(h, 0, 0, 0);
+           const slotEnd = new Date(currentDate);
+           slotEnd.setHours(h + 1, 0, 0, 0);
            
-           const logsInHour = logs.filter(l => new Date(l.start_time).getHours() === h);
+           const logsInHour = logs.filter(l => l.start_time < slotEnd.getTime() && l.end_time > slotStart.getTime());
            const sortedLogs = logsInHour.sort((a, b) => a.start_time - b.start_time);
            const combinedActivity = sortedLogs.map(l => l.activity).join(' | ');
            

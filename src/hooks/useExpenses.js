@@ -1,27 +1,24 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db/db';
+import { useSupabase, triggerOptimisticRefetch } from './useSupabase';
+import { supabase } from '../db/supabase';
 
 export function useExpensesByDate(dateString) {
-  return useLiveQuery(() => 
-    db.expenses
-      .where('date_string')
-      .equals(dateString)
-      .reverse()
-      .sortBy('timestamp')
-  , [dateString]);
+  return useSupabase('expenses', (q) => q.eq('date_string', dateString).order('timestamp', { ascending: false }), [dateString]);
 }
 
 export async function addExpense({ amount, category, description, dateString }) {
-  await db.expenses.add({
-    id: crypto.randomUUID(),
+  const expense = {
     amount: parseFloat(amount) || 0,
     category,
     description: description || '',
     date_string: dateString,
-    timestamp: Date.now()
-  });
+  };
+  const { error } = await supabase.from('expenses').insert([{ ...expense, id: crypto.randomUUID(), timestamp: Date.now() }]);
+  if (error) throw error;
+  triggerOptimisticRefetch('expenses');
 }
 
 export async function deleteExpense(id) {
-  await db.expenses.delete(id);
+  const { error } = await supabase.from('expenses').delete().eq('id', id);
+  if (error) throw error;
+  triggerOptimisticRefetch('expenses');
 }

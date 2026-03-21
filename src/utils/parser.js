@@ -8,8 +8,8 @@ export function parseBulkLogs(text, baseDate = new Date()) {
   let lastStartMs = 0;
 
   for (const line of lines) {
-    // Matches explicit time formats to prevent confusing colons in the activity description with separators
-    const match = line.match(/^\s*(midnight|noon|\d{1,2}:\d{2})\s*-\s*(midnight|noon|\d{1,2}:\d{2})\s*[:\-\s]?\s*(.+)$/i);
+    // Matches explicit time formats separated by '-' or 'to', followed by '-' or ':' or space, then activity
+    const match = line.match(/^\s*(midnight|noon|\d{1,2}:\d{2})\s*(?:-|to)\s*(midnight|noon|\d{1,2}:\d{2})\s*[:\-]?\s*(.+)$/i);
     if (!match) continue;
 
     let [_, startStr, endStr, activityStr] = match;
@@ -21,7 +21,10 @@ export function parseBulkLogs(text, baseDate = new Date()) {
       
       const timeMatch = str.match(/(\d+):(\d+)/);
       if (timeMatch) {
-        return { h: parseInt(timeMatch[1], 10), m: parseInt(timeMatch[2], 10) };
+        const h = parseInt(timeMatch[1], 10);
+        const m = parseInt(timeMatch[2], 10);
+        if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+        return { h, m };
       }
       return null;
     };
