@@ -301,7 +301,7 @@ export async function processNextJob() {
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s offline timeout
+  const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute offline timeout
 
   try {
     const response = await fetch('http://127.0.0.1:11434/api/generate', {
@@ -334,7 +334,7 @@ export async function processNextJob() {
 
   } catch (error) {
     if (error.name === 'AbortError') {
-       await supabase.from('llm_jobs').update({ status: 'failed', error: 'Ollama model timeout (60s)' }).eq('id', job.id);
+       await supabase.from('llm_jobs').update({ status: 'failed', error: 'Ollama model timeout (300s)' }).eq('id', job.id);
     } else {
        await supabase.from('llm_jobs').update({ status: 'failed', error: error.message }).eq('id', job.id);
     }
