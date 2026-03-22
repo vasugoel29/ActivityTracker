@@ -100,9 +100,9 @@ export function Goals() {
                     </div>
                     
                     <div className="flex justify-between items-center gap-4 mt-1">
-                       <div className="flex-1">
-                          <h3 className={`font-bold text-lg transition-colors ${isCompleted ? 'text-gray-400 line-through decoration-2 decoration-gray-600' : 'text-white'}`}>{habit.name}</h3>
-                          <p className="text-gray-500 text-[11px] mt-0.5 uppercase tracking-widest font-bold">
+                       <div className="flex-1 min-w-0 pr-2">
+                          <h3 className={`font-bold text-lg transition-colors truncate ${isCompleted ? 'text-gray-400 line-through decoration-2 decoration-gray-600' : 'text-white'}`}>{habit.name}</h3>
+                          <p className="text-gray-500 text-[11px] mt-0.5 uppercase tracking-widest font-bold truncate">
                              {habit.frequency_type.replace('_', ' ')} • Goal: {target}
                           </p>
                        </div>
@@ -196,7 +196,7 @@ function AddHabitModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#12121A] w-full max-w-md rounded-[2rem] border border-gray-800 shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-2">
+      <div className="bg-[#12121A] w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] border border-gray-800 shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-2">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white tracking-tight">Define Routine</h2>
           <button onClick={onClose} className="p-2 text-gray-500 hover:text-white bg-gray-900 rounded-full transition-colors"><X size={20} /></button>

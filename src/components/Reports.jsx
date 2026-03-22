@@ -5,6 +5,7 @@ import { Bot, RefreshCw, AlertCircle, Clock, ChevronLeft, ChevronRight, Zap } fr
 import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths } from 'date-fns';
 import { useToast } from './Toaster';
 import { motion } from 'framer-motion';
+import { supabase } from '../db/supabase';
 
 export function Reports() {
   const toast = useToast();
@@ -55,6 +56,11 @@ export function Reports() {
       if (result.isEmpty) {
         toast.error('No activities or logs for this period to analyze.');
         return;
+      }
+      
+      const failedIds = activeJobs.filter(j => j.status === 'failed').map(j => j.id);
+      if (failedIds.length > 0) {
+         await supabase.from('llm_jobs').delete().in('id', failedIds);
       }
       
       await requestReport(payload, activeTab, { start_date: currentDate.toISOString() });

@@ -79,12 +79,12 @@ export function Dashboard() {
          ) : (
             expenses.map(exp => (
                <div key={exp.id} className="bg-[#12121A] border border-gray-800 p-4 rounded-2xl flex justify-between items-center group transition-colors hover:border-gray-700">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-1 min-w-0 mr-4">
                      <div className="h-12 w-12 rounded-2xl bg-[#0B0B0F] border border-gray-800 flex items-center justify-center shrink-0">
                         <CreditCard size={20} className="text-emerald-500/70" />
                      </div>
-                     <div>
-                        <h3 className="font-bold text-white text-[15px]">{exp.category}</h3>
+                     <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-white text-[15px] truncate">{exp.category}</h3>
                         {exp.description && (
                            <p className="text-gray-500 text-xs mt-0.5 truncate max-w-[150px]">{exp.description}</p>
                         )}
@@ -163,7 +163,7 @@ function AddExpenseModal({ dateStr, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#12121A] w-full max-w-md rounded-[2rem] border border-gray-800 shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-2">
+      <div className="bg-[#12121A] w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] border border-gray-800 shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-2">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white tracking-tight">Log Transaction</h2>
           <button onClick={onClose} className="p-2 text-gray-500 hover:text-white bg-gray-900 rounded-full transition-colors"><X size={20} /></button>
