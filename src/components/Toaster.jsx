@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -7,6 +8,7 @@ const ToastContext = createContext({
   error: () => {}
 });
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast() {
   return useContext(ToastContext);
 }
@@ -28,9 +30,10 @@ export function ToastProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    const activeTimeouts = timeoutsRef.current;
     return () => {
-      timeoutsRef.current.forEach(timer => clearTimeout(timer));
-      timeoutsRef.current.clear();
+      activeTimeouts.forEach(timer => clearTimeout(timer));
+      activeTimeouts.clear();
     };
   }, []);
 

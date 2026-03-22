@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../db/supabase';
 import { triggerOptimisticRefetch } from '../hooks/useSupabase';
 import { FileText, Check } from 'lucide-react';
 import { useToast } from './Toaster';
+import { parseBulkLogs } from '../utils/parser';
 
 export function BulkLoggerModal({ isOpen, onClose }) {
   const toast = useToast();

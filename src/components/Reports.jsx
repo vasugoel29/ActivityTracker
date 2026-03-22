@@ -4,6 +4,7 @@ import { buildReportPayload } from '../utils/payloadBuilder';
 import { Bot, RefreshCw, AlertCircle, Clock, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths } from 'date-fns';
 import { useToast } from './Toaster';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { supabase } from '../db/supabase';
 
@@ -102,7 +103,7 @@ export function Reports() {
           }
           if (type === 'monthly_report') return format(d, 'MMMM yyyy');
           return format(d, 'MMM do, yyyy');
-      } catch (e) {
+      } catch (_e) {
           return 'Analysis Period';
       }
   };
@@ -139,7 +140,7 @@ export function Reports() {
         }
         if (line.match(/^#+\s*Pillar (Breakdown|Averages|Scores)/i)) continue;
         
-        const pillarMatch = line.match(/^[-*]\s*(Health|Wealth|Work|Spiritual|Relationships):\s*(\d+)[^0-9]?\/?10[:\-\.\s\(]*(.*?)\)*$/i);
+        const pillarMatch = line.match(/^[-*]\s*(Health|Wealth|Work|Spiritual|Relationships):\s*(\d+)[^0-9]?\/?10[:-.\s(]*(.*?)\)*$/i);
         if (pillarMatch) {
            pillars.push({
               name: pillarMatch[1],

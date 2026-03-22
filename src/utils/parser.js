@@ -9,7 +9,7 @@ export function parseBulkLogs(text, baseDate = new Date()) {
 
   for (const line of lines) {
     // Matches explicit time formats separated by '-' or 'to', followed by '-' or ':' or space, then activity
-    const match = line.match(/^\s*(midnight|noon|\d{1,2}:\d{2})\s*(?:-|to)\s*(midnight|noon|\d{1,2}:\d{2})\s*[:\-]?\s*(.+)$/i);
+    const match = line.match(/^\s*(midnight|noon|\d{1,2}:\d{2})\s*(?:-|to)\s*(midnight|noon|\d{1,2}:\d{2})\s*[:-]?\s*(.+)$/i);
     if (!match) continue;
 
     let [_, startStr, endStr, activityStr] = match;

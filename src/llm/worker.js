@@ -341,6 +341,7 @@ export async function processNextJob() {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 let workerTimeoutId = null;
 export function startWorker() {
   if (typeof window !== 'undefined') {

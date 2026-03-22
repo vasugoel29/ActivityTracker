@@ -51,6 +51,7 @@ export function useSupabase(table, queryBuilder, deps = []) {
       targetListeners.delete(listener);
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   return data;

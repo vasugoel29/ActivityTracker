@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 import { useHabits, useHabitLogs, addHabit, deleteHabit, toggleDailyHabit, logHabitInstance, removeLastHabitLog } from '../hooks/useHabits';
 import { Plus, Check, ChevronLeft, ChevronRight, X, Target, Trash2, Minus } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, subDays, addDays, isSameDay, parseISO } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays, isSameDay, parseISO } from 'date-fns';
 import { useToast } from './Toaster';
 
 export function Goals() {
