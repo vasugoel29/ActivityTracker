@@ -34,7 +34,16 @@ export function Reports() {
     { id: 'monthly_report', label: 'Monthly' }
   ];
 
+  const lastRunTime = React.useRef(0);
+
   const handleGenerate = async () => {
+    // Abuse protection: Rate limit Force Run to 1 request per 30 seconds
+    if (Date.now() - lastRunTime.current < 30000) {
+       toast.error("Rate limit active: Please wait 30 seconds before forcing another run.");
+       return;
+    }
+    lastRunTime.current = Date.now();
+
     setLoading(true);
     let payload = `Triggered manual ${activeTab} analysis request for period ending ${currentDate.toLocaleDateString()}.`;
     

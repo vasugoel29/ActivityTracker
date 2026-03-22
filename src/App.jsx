@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from './db/supabase';
 import { Layout } from './components/Layout';
 import { HourlyTimeline } from './components/HourlyTimeline';
 import { BulkLoggerModal } from './components/BulkLoggerModal';
@@ -9,12 +10,23 @@ import { FileText } from 'lucide-react';
 import { useAutoReportGenerator } from './hooks/useAutoReportGenerator';
 import { ToastProvider } from './components/Toaster';
 import { GlobalJobQueue } from './components/GlobalJobQueue';
+import { Auth } from './components/Auth';
 
 function App() {
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    return () => subscription.unsubscribe();
+  }, []);
+
   useAutoReportGenerator();
 
   const [currentTab, setCurrentTab] = useState('home');
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+
+  if (!session) return <Auth />;
 
   return (
     <ToastProvider>

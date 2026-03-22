@@ -10,12 +10,25 @@ export function QuickLogModal({ isOpen, onClose }) {
   const [notes, setNotes] = useState('');
 
   const handleSave = async () => {
-    if (!activity.trim()) return;
+    if (!activity || !activity.trim()) return;
+
+    // Strict input validation & sanitization
+    const sanitizedActivity = activity.trim();
+    if (sanitizedActivity.length > 200) {
+      alert("Activity description is too long (max 200 chars).");
+      return;
+    }
+    const sanitizedNotes = notes ? notes.trim() : '';
+    if (sanitizedNotes.length > 500) {
+      alert("Notes are too long (max 500 chars).");
+      return;
+    }
+
     await addLog({
-      activity: activity.trim(),
+      activity: sanitizedActivity,
       life_area: lifeArea,
       energy_level: energyLevel,
-      notes: notes.trim(),
+      notes: sanitizedNotes,
     });
     // Reset form
     setActivity('');
