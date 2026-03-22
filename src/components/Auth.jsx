@@ -18,7 +18,18 @@ export function Auth() {
     setLoading(true);
     let res;
     if (isSignUp) {
-      res = await supabase.auth.signUp({ email, password });
+      res = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+      if (!res.error) {
+        alert("Success! Please check your email for the confirmation link.");
+        // clear form or switch to login mode if desired
+        setIsSignUp(false);
+      }
     } else {
       res = await supabase.auth.signInWithPassword({ email, password });
     }
