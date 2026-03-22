@@ -61,12 +61,12 @@ CREATE TABLE IF NOT EXISTS llm_jobs (
 );
 
 -- Secure existing tables by adding user_id
-ALTER TABLE logs ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL DEFAULT auth.uid();
-ALTER TABLE habits ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL DEFAULT auth.uid();
-ALTER TABLE habit_logs ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL DEFAULT auth.uid();
-ALTER TABLE expenses ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL DEFAULT auth.uid();
-ALTER TABLE reports ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL DEFAULT auth.uid();
-ALTER TABLE llm_jobs ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL DEFAULT auth.uid();
+ALTER TABLE logs ADD COLUMN IF NOT EXISTS user_id UUID DEFAULT auth.uid();
+ALTER TABLE habits ADD COLUMN IF NOT EXISTS user_id UUID DEFAULT auth.uid();
+ALTER TABLE habit_logs ADD COLUMN IF NOT EXISTS user_id UUID DEFAULT auth.uid();
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS user_id UUID DEFAULT auth.uid();
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS user_id UUID DEFAULT auth.uid();
+ALTER TABLE llm_jobs ADD COLUMN IF NOT EXISTS user_id UUID DEFAULT auth.uid();
 
 -- Enable Row Level Security (RLS) on all tables
 ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
