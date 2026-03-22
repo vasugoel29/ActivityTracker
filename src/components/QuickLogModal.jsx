@@ -33,7 +33,7 @@ export function QuickLogModal({ isOpen, onClose }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col justify-end sm:justify-center p-0 sm:p-4"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex flex-col justify-end sm:justify-center p-0 sm:p-4"
             onClick={onClose}
           >
             <motion.div 

@@ -111,7 +111,7 @@ export function Dashboard() {
       {isAddModalOpen && <AddExpenseModal dateStr={dateStr} onClose={() => setIsAddModalOpen(false)} />}
       
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-[#12121A] p-6 rounded-3xl border border-gray-800 shadow-2xl max-w-sm w-full">
             <h3 className="text-xl font-bold text-white mb-2">Delete Transaction?</h3>
             <p className="text-gray-500 text-sm mb-6">This action cannot be undone.</p>
@@ -162,7 +162,7 @@ function AddExpenseModal({ dateStr, onClose }) {
   const commonCategories = ["Food", "Transport", "Shopping", "Entertainment", "Utilities", "Health", "Other"];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-[#12121A] w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] border border-gray-800 shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-2">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white tracking-tight">Log Transaction</h2>
