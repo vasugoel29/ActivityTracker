@@ -75,9 +75,7 @@ ALTER TABLE habit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE llm_jobs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
-ALTER TABLE llm_jobs ENABLE ROW LEVEL SECURITY;
+
 
 -- Create policies enforcing IDOR protection (ownership limits based on auth.uid())
 DROP POLICY IF EXISTS "Enable all operations for anon" ON logs;
