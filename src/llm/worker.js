@@ -336,7 +336,14 @@ export async function processNextJob() {
     if (error.name === 'AbortError') {
        await supabase.from('llm_jobs').update({ status: 'pending', error: 'Ollama model timeout (300s)' }).eq('id', job.id);
     } else {
-       await supabase.from('llm_jobs').update({ status: 'pending', error: error.message }).eq('id', job.id);
+       const prevRetriesMatch = job.error?.match(/^\[Retry (\d+)\]/);
+       const retries = prevRetriesMatch ? parseInt(prevRetriesMatch[1], 10) + 1 : 1;
+       
+       if (retries >= 5) {
+          await supabase.from('llm_jobs').update({ status: 'failed', error: `Max retries reached: ${error.message}` }).eq('id', job.id);
+       } else {
+          await supabase.from('llm_jobs').update({ status: 'pending', error: `[Retry ${retries}] ${error.message}` }).eq('id', job.id);
+       }
     }
   }
 }
