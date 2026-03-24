@@ -140,7 +140,7 @@ export function Reports() {
         }
         if (line.match(/^#+\s*Pillar (Breakdown|Averages|Scores)/i)) continue;
         
-        const pillarMatch = line.match(/^[-*]\s*(Health|Wealth|Work|Spiritual|Relationships):\s*(\d+)[^0-9]?\/?10[:-.\s(]*(.*?)\)*$/i);
+        const pillarMatch = line.match(/^[-*]\s*(Health|Wealth|Work|Spiritual|Relationships):\s*(\d+)[^0-9]?\/?10[-:.\s(]*(.*?)\)*$/i);
         if (pillarMatch) {
            pillars.push({
               name: pillarMatch[1],

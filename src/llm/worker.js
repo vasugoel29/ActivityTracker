@@ -334,9 +334,9 @@ export async function processNextJob() {
 
   } catch (error) {
     if (error.name === 'AbortError') {
-       await supabase.from('llm_jobs').update({ status: 'failed', error: 'Ollama model timeout (300s)' }).eq('id', job.id);
+       await supabase.from('llm_jobs').update({ status: 'pending', error: 'Ollama model timeout (300s)' }).eq('id', job.id);
     } else {
-       await supabase.from('llm_jobs').update({ status: 'failed', error: error.message }).eq('id', job.id);
+       await supabase.from('llm_jobs').update({ status: 'pending', error: error.message }).eq('id', job.id);
     }
   }
 }
@@ -345,15 +345,20 @@ export async function processNextJob() {
 let workerTimeoutId = null;
 export function startWorker() {
   if (typeof window !== 'undefined') {
-    const loop = async () => {
-      try {
-        await processNextJob();
-      } catch (e) {
-        console.error(e);
-      }
-      workerTimeoutId = setTimeout(loop, 5000);
-    };
-    loop();
+    supabase.from('llm_jobs')
+      .update({ status: 'pending', error: 'Recovered stuck job on startup' })
+      .eq('status', 'processing')
+      .then(() => {
+        const loop = async () => {
+          try {
+            await processNextJob();
+          } catch (e) {
+            console.error(e);
+          }
+          workerTimeoutId = setTimeout(loop, 5000);
+        };
+        loop();
+      });
   }
 }
 

@@ -8,25 +8,16 @@ import { Reports } from './components/Reports';
 import { Goals } from './components/Goals';
 import { FileText } from 'lucide-react';
 import { useAutoReportGenerator } from './hooks/useAutoReportGenerator';
+import { useActivityNotifier } from './hooks/useActivityNotifier';
 import { ToastProvider } from './components/Toaster';
 import { GlobalJobQueue } from './components/GlobalJobQueue';
-import { Auth } from './components/Auth';
 
 function App() {
-  const [session, setSession] = useState(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
-    return () => subscription.unsubscribe();
-  }, []);
-
   useAutoReportGenerator();
+  useActivityNotifier();
 
   const [currentTab, setCurrentTab] = useState('home');
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-
-  if (!session) return <Auth />;
 
   return (
     <ToastProvider>
