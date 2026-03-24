@@ -309,7 +309,7 @@ export async function processNextJob() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'mistral', 
+        model: 'qwen3.5:9b', 
         prompt: buildPrompt(job),
         stream: false
       }),
