@@ -7,13 +7,11 @@ import { Dashboard } from './components/Dashboard';
 import { Reports } from './components/Reports';
 import { Goals } from './components/Goals';
 import { FileText } from 'lucide-react';
-import { useAutoReportGenerator } from './hooks/useAutoReportGenerator';
 import { useActivityNotifier } from './hooks/useActivityNotifier';
 import { ToastProvider } from './components/Toaster';
 import { GlobalJobQueue } from './components/GlobalJobQueue';
 
 function App() {
-  useAutoReportGenerator();
   useActivityNotifier();
 
   const [currentTab, setCurrentTab] = useState('home');
