@@ -26,7 +26,7 @@ export function useActivityNotifier() {
       if (maxHour < 0) return; 
 
       const { data: logs } = await supabase
-        .from('logs')
+        .from('activities')
         .select('*')
         .gte('start_time', startOfDay.getTime())
         .lt('end_time', now.getTime());

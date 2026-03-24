@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLogsForDate } from '../hooks/useLogs';
 import { saveHourlyLog } from '../db/queries';
-import { format, subDays, addDays, isSameDay } from 'date-fns';
+import { format, subDays, addDays, isSameDay, formatISO } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function HourlyTimeline() {
@@ -57,7 +57,7 @@ export function HourlyTimeline() {
            const displayHour = `${h.toString().padStart(2, '0')}:00`;
 
            return (
-             <div key={`${currentDate.toISOString()}-${h}`} className="flex items-center border-b border-gray-800/50 last:border-0 group transition-colors focus-within:bg-[#12121A]/50">
+             <div key={`${formatISO(currentDate)}-${h}`} className="flex items-center border-b border-gray-800/50 last:border-0 group transition-colors focus-within:bg-[#12121A]/50">
                 <div className="w-20 py-5 px-3 text-right shrink-0">
                    <span className="text-sm font-mono font-bold text-gray-600 group-focus-within:text-[#818cf8] transition-colors">{displayHour}</span>
                 </div>

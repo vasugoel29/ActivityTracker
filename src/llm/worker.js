@@ -1,4 +1,5 @@
 import { supabase } from '../db/supabase';
+import { formatISO } from 'date-fns';
 
 const buildPrompt = (job) => {
   const { type } = job;
@@ -287,16 +288,16 @@ export async function processNextJob() {
   if (job.meta && !job.meta.end_date && job.meta.start_date) {
      const startD = new Date(job.meta.start_date);
      if (job.type === 'daily_report') {
-        job.meta.end_date = startD.toISOString();
+        job.meta.end_date = formatISO(startD);
      } else if (job.type === 'weekly_report') {
         const endD = new Date(startD);
         endD.setDate(endD.getDate() + 6);
-        job.meta.end_date = endD.toISOString();
+        job.meta.end_date = formatISO(endD);
      } else if (job.type === 'monthly_report') {
         const endD = new Date(startD);
         endD.setMonth(endD.getMonth() + 1);
         endD.setDate(0);
-        job.meta.end_date = endD.toISOString();
+        job.meta.end_date = formatISO(endD);
      }
   }
 

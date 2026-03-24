@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '../db/supabase';
 import { requestReport } from './useReports';
 import { buildReportPayload } from '../utils/payloadBuilder';
-import { startOfDay, subDays, startOfMonth, startOfWeek, endOfDay, isSameDay } from 'date-fns';
+import { startOfDay, subDays, startOfMonth, startOfWeek, endOfDay, isSameDay, formatISO } from 'date-fns';
 
 export function useAutoReportGenerator() {
   useEffect(() => {
@@ -33,7 +33,7 @@ export function useAutoReportGenerator() {
 
            const { payload, isEmpty } = await buildReportPayload(startObj.getTime(), endObj.getTime());
            if (!isEmpty) {
-              await requestReport(payload, type, { start_date: targetDate.toISOString() });
+              await requestReport(payload, type, { start_date: formatISO(targetDate) });
            }
         }
       };

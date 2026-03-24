@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useReportsByType, useJobsByType, requestReport } from '../hooks/useReports';
 import { buildReportPayload } from '../utils/payloadBuilder';
 import { Bot, RefreshCw, AlertCircle, Clock, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
-import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths, formatISO } from 'date-fns';
 import { useToast } from './Toaster';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
@@ -73,7 +73,7 @@ export function Reports() {
          await supabase.from('llm_jobs').delete().in('id', failedIds);
       }
       
-      await requestReport(payload, activeTab, { start_date: currentDate.toISOString() });
+      await requestReport(payload, activeTab, { start_date: formatISO(currentDate) });
       toast.success(`${tabs.find(t => t.id === activeTab).label} Report generation queued! Check the Job Tracker.`);
     } catch (error) {
       console.error(error);
@@ -198,7 +198,7 @@ export function Reports() {
         </button>
         <div className="text-center">
           <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-0.5">Target Period</p>
-          <p className="text-sm font-bold text-gray-200">{renderDateLabel(currentDate.toISOString(), activeTab)}</p>
+          <p className="text-sm font-bold text-gray-200">{renderDateLabel(formatISO(currentDate), activeTab)}</p>
         </div>
         <button 
            onClick={() => {

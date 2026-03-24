@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
-import { addLog } from '../db/queries';
+import { supabase } from '../db/supabase';
+import { triggerOptimisticRefetch } from '../hooks/useSupabase';
 import { Zap } from 'lucide-react';
 
 export function QuickLogModal({ isOpen, onClose }) {
   const [activity, setActivity] = useState('');
-  const [lifeArea, setLifeArea] = useState('work');
-  const [energyLevel, setEnergyLevel] = useState(2);
-  const [notes, setNotes] = useState('');
 
   const handleSave = async () => {
     if (!activity || !activity.trim()) return;
@@ -19,22 +17,21 @@ export function QuickLogModal({ isOpen, onClose }) {
       alert("Activity description is too long (max 200 chars).");
       return;
     }
-    const sanitizedNotes = notes ? notes.trim() : '';
-    if (sanitizedNotes.length > 500) {
-      alert("Notes are too long (max 500 chars).");
-      return;
-    }
 
-    await addLog({
+    const end_time = Date.now();
+    const start_time = end_time - 30 * 60000; // Defaulting to an estimated 30-minute block
+
+    await supabase.from('activities').insert([{
       activity: sanitizedActivity,
-      life_area: lifeArea,
-      energy_level: energyLevel,
-      notes: sanitizedNotes,
-    });
+      start_time,
+      end_time,
+      created_at: Date.now()
+    }]);
+    
+    triggerOptimisticRefetch('activities');
+
     // Reset form
     setActivity('');
-    setNotes('');
-    setEnergyLevel(2);
     onClose();
   };
 
@@ -72,34 +69,8 @@ export function QuickLogModal({ isOpen, onClose }) {
                 value={activity}
                 onChange={e => setActivity(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSave()}
-                className="w-full bg-[#0B0B0F] border border-gray-800 rounded-xl px-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-[#818cf8] focus:border-[#818cf8] mb-5 text-lg"
+                className="w-full bg-[#0B0B0F] border border-gray-800 rounded-xl px-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-[#818cf8] focus:border-[#818cf8] mb-6 text-lg"
               />
-
-              <div className="flex gap-2 mb-5 overflow-x-auto pb-2 scrollbar-hide">
-                {['work', 'health', 'learning', 'social', 'leisure', 'waste'].map(area => (
-                  <button 
-                    key={area}
-                    onClick={() => setLifeArea(area)}
-                    className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${lifeArea === area ? 'bg-[#818cf8]/10 text-[#818cf8] border border-[#818cf8]/30' : 'bg-[#0B0B0F] text-gray-400 border border-gray-800 hover:text-gray-300'}`}
-                  >
-                    {area.charAt(0).toUpperCase() + area.slice(1)}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mb-6">
-                <div className="flex gap-2 bg-[#0B0B0F] p-1.5 rounded-2xl border border-gray-800">
-                  {[{val: 1, label: 'Low Energy'}, {val: 2, label: 'Normal'}, {val: 3, label: 'High Energy'}].map(lvl => (
-                    <button 
-                      key={lvl.val}
-                      onClick={() => setEnergyLevel(lvl.val)}
-                      className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${energyLevel === lvl.val ? 'bg-[#12121A] text-white shadow-sm ring-1 ring-white/5' : 'text-gray-500 hover:text-gray-300'}`}
-                    >
-                      {lvl.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               <button 
                 onClick={handleSave}

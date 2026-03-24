@@ -1,7 +1,7 @@
 import { supabase } from '../db/supabase';
 
 export async function buildReportPayload(start, end) {
-  const { data: logs } = await supabase.from('logs').select('*').gte('start_time', start).lte('start_time', end);
+  const { data: logs } = await supabase.from('activities').select('*').gte('start_time', start).lte('start_time', end);
   const { data: expenses } = await supabase.from('expenses').select('*').gte('timestamp', start).lte('timestamp', end);
   
   const { data: habitLogs } = await supabase.from('habit_logs').select('*').gte('timestamp', start).lte('timestamp', end);
@@ -10,7 +10,6 @@ export async function buildReportPayload(start, end) {
   const payloadData = {
     TIMELINE_LOGS: (logs || []).map(l => ({
       activity: l.activity,
-      life_area: l.life_area,
       time: `${new Date(l.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`,
       date: new Date(l.start_time).toLocaleDateString()
     })),

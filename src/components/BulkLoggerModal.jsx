@@ -6,13 +6,14 @@ import { triggerOptimisticRefetch } from '../hooks/useSupabase';
 import { FileText, Check } from 'lucide-react';
 import { useToast } from './Toaster';
 import { parseBulkLogs } from '../utils/parser';
+import { format } from 'date-fns';
 
 export function BulkLoggerModal({ isOpen, onClose }) {
   const toast = useToast();
   const [text, setText] = useState('');
   
   // Format today's date for standard <input type="date">
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const handleSave = async () => {
@@ -29,15 +30,13 @@ export function BulkLoggerModal({ isOpen, onClose }) {
         start_time: log.start_time,
         end_time: log.end_time,
         activity: log.activity,
-        life_area: 'untracked',
-        energy_level: 2,
         created_at: Date.now()
       }));
 
-      const { error } = await supabase.from('logs').insert(formattedLogs);
+      const { error } = await supabase.from('activities').insert(formattedLogs);
       
       if (error) throw error;
-      triggerOptimisticRefetch('logs');
+      triggerOptimisticRefetch('activities');
       
       toast.success(`${formattedLogs.length} activities logged!`);
       setText('');
