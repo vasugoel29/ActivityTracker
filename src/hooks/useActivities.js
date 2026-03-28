@@ -1,7 +1,7 @@
 import { useSupabase } from './useSupabase';
 import { startOfDay, endOfDay } from 'date-fns';
 
-export function useLogsForDate(date) {
+export function useActivitiesForDate(date) {
   const start = startOfDay(date).getTime();
   const end = endOfDay(date).getTime();
   

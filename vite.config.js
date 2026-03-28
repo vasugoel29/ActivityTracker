@@ -26,6 +26,30 @@ export default defineConfig({
           }
         ]
       }
-    })
+    }),
+    {
+      name: 'terminal-logger',
+      configureServer(server) {
+        server.middlewares.use('/api/log', (req, res) => {
+          if (req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => { body += chunk; });
+            req.on('end', () => {
+              try {
+                const data = JSON.parse(body);
+                console.log(`\x1b[36m[AI Worker]\x1b[0m ${data.message}`);
+              } catch (e) {
+                console.error('Failed to parse log body', e);
+              }
+              res.statusCode = 200;
+              res.end();
+            });
+          } else {
+            res.statusCode = 404;
+            res.end();
+          }
+        });
+      }
+    }
   ],
 })

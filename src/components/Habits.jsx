@@ -5,7 +5,7 @@ import { Plus, Check, ChevronLeft, ChevronRight, X, Target, Trash2, Minus } from
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays, isSameDay, parseISO, isToday as isTodayFn } from 'date-fns';
 import { useToast } from './Toaster';
 
-export function Goals() {
+export function Habits() {
   const habits = useHabits() || [];
   const logs = useHabitLogs() || [];
   

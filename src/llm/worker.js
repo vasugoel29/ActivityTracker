@@ -1,5 +1,6 @@
 import { supabase } from '../db/supabase';
 import { formatISO } from 'date-fns';
+import { logToTerminal } from '../utils/logger';
 
 const buildPrompt = (job) => {
   const { type } = job;
@@ -284,6 +285,7 @@ export async function processNextJob() {
   if (!job) return;
 
   await supabase.from('llm_jobs').update({ status: 'processing' }).eq('id', job.id);
+  logToTerminal(`Found pending job: ${job.type} (ID: ${job.id.split('-')[0]}...)`);
 
   if (job.meta && !job.meta.end_date && job.meta.start_date) {
      const startD = new Date(job.meta.start_date);
@@ -304,13 +306,15 @@ export async function processNextJob() {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute offline timeout
 
+  const prompt = buildPrompt(job);
   try {
+    logToTerminal(`Sending prompt to Ollama (model: mistral, length: ${prompt.length})...`);
     const response = await fetch('http://127.0.0.1:11434/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'qwen3.5:9b', 
-        prompt: buildPrompt(job),
+        model: 'mistral', 
+        prompt,
         stream: false
       }),
       signal: controller.signal
@@ -332,8 +336,10 @@ export async function processNextJob() {
     }]);
 
     await supabase.from('llm_jobs').update({ status: 'completed' }).eq('id', job.id);
+    logToTerminal(`Successfully generated ${job.type} report.`);
 
   } catch (error) {
+    logToTerminal(`Error processing ${job.type}: ${error.message}`);
     if (error.name === 'AbortError') {
        await supabase.from('llm_jobs').update({ status: 'pending', error: 'Ollama model timeout (300s)' }).eq('id', job.id);
     } else {

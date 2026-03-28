@@ -4,7 +4,7 @@ import { Plus, ChevronLeft, ChevronRight, X, Trash2, Wallet, TrendingDown, Tag, 
 import { format, subDays, addDays, isSameDay, isToday as isTodayFn } from 'date-fns';
 import { useToast } from './Toaster';
 
-export function Dashboard() {
+export function Expenses() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);

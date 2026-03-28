@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { useLogsForDate } from '../hooks/useLogs';
+import { useActivitiesForDate } from '../hooks/useActivities';
 import { saveHourlyLog } from '../db/queries';
 import { format, subDays, addDays, isSameDay, formatISO } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export function HourlyTimeline() {
+export function ActivityLog() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const logs = useLogsForDate(currentDate) || [];
+  const logs = useActivitiesForDate(currentDate) || [];
 
   const handleBlur = async (h, value) => {
     const slotStart = new Date(currentDate);

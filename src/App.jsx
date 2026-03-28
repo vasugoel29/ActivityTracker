@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './db/supabase';
 import { Layout } from './components/Layout';
-import { HourlyTimeline } from './components/HourlyTimeline';
+import { ActivityLog } from './components/ActivityLog';
 import { BulkLoggerModal } from './components/BulkLoggerModal';
-import { Dashboard } from './components/Dashboard';
+import { Expenses } from './components/Expenses';
 import { Reports } from './components/Reports';
-import { Goals } from './components/Goals';
+import { Habits } from './components/Habits';
 import { FileText } from 'lucide-react';
 import { useActivityNotifier } from './hooks/useActivityNotifier';
 import { ToastProvider } from './components/Toaster';
@@ -34,10 +34,10 @@ function App() {
             </div>
           )}
 
-          {currentTab === 'home' && <HourlyTimeline />}
-          {currentTab === 'dashboard' && <Dashboard />}
+          {currentTab === 'home' && <ActivityLog />}
+          {currentTab === 'dashboard' && <Expenses />}
           {currentTab === 'reports' && <Reports />}
-          {currentTab === 'goals' && <Goals />}
+          {currentTab === 'goals' && <Habits />}
         </div>
 
         <BulkLoggerModal isOpen={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} />
