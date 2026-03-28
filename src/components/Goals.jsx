@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 import { useHabits, useHabitLogs, addHabit, deleteHabit, toggleDailyHabit, logHabitInstance, removeLastHabitLog } from '../hooks/useHabits';
 import { Plus, Check, ChevronLeft, ChevronRight, X, Target, Trash2, Minus } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays, isSameDay, parseISO } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays, isSameDay, parseISO, isToday as isTodayFn } from 'date-fns';
 import { useToast } from './Toaster';
 
 export function Goals() {
@@ -71,7 +71,8 @@ export function Goals() {
         </div>
         <button 
            onClick={() => setCurrentDate(addDays(currentDate, 1))} 
-           className="p-2 text-gray-400 hover:text-white transition rounded-xl hover:bg-gray-800/50"
+           disabled={isTodayFn(currentDate)}
+           className={`p-2 transition rounded-xl ${isTodayFn(currentDate) ? 'text-gray-800 cursor-not-allowed' : 'text-gray-400 hover:text-white hover:bg-gray-800/50'}`}
         >
            <ChevronRight size={20} />
         </button>

@@ -78,6 +78,7 @@ export function BulkLoggerModal({ isOpen, onClose }) {
                  <input 
                     type="date" 
                     value={selectedDate}
+                    max={todayStr}
                     onChange={e => setSelectedDate(e.target.value)}
                     className="w-full bg-[#0B0B0F] border border-gray-800 rounded-xl p-3 text-gray-200 focus:outline-none focus:ring-1 focus:ring-[#818cf8] font-mono text-sm [color-scheme:dark]"
                  />

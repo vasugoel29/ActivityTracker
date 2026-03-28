@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useExpensesByDate, addExpense, deleteExpense } from '../hooks/useExpenses';
 import { Plus, ChevronLeft, ChevronRight, X, Trash2, Wallet, TrendingDown, Tag, CreditCard } from 'lucide-react';
-import { format, subDays, addDays, isSameDay } from 'date-fns';
+import { format, subDays, addDays, isSameDay, isToday as isTodayFn } from 'date-fns';
 import { useToast } from './Toaster';
 
 export function Dashboard() {
@@ -42,7 +42,8 @@ export function Dashboard() {
         </div>
         <button 
            onClick={() => setCurrentDate(addDays(currentDate, 1))} 
-           className="p-2 text-gray-400 hover:text-white transition rounded-xl hover:bg-gray-800/50"
+           disabled={isTodayFn(currentDate)}
+           className={`p-2 transition rounded-xl ${isTodayFn(currentDate) ? 'text-gray-800 cursor-not-allowed' : 'text-gray-400 hover:text-white hover:bg-gray-800/50'}`}
         >
            <ChevronRight size={20} />
         </button>
