@@ -3,196 +3,71 @@ import { formatISO } from 'date-fns';
 import { logToTerminal } from '../utils/logger';
 
 const buildPrompt = (job) => {
-  const { type } = job;
-  const payload = job.payload;
+  const { type, payload } = job;
+  const periodLabel = type === 'daily_report' ? 'Day' : type === 'weekly_report' ? 'Week' : 'Month';
   
-  if (type === 'daily_report') {
-    return `You are a world-class Life Systems Architect.
+  return `You are a world-class Life Systems Architect and Strategic Auditor.
     
-Analyze the following user data (time logs, habits, expenses) and provide a rigorous, unsentimental, and highly insightful life audit.
+Analyze the following user data (time logs, habits, expenses) for the past ${periodLabel} and provide a rigorous, unsentimental, and highly insightful life audit.
 
 ## INPUT DATA
 ${payload}
-
----
-
-## OUTPUT REQUIREMENTS (STRICT FORMAT)
-
-# Daily Life Report
-
-## Life Score
-<Provide a score from 0 to 100 based on discipline, balance, and productivity. Be honest.>
-
-## Pillar Breakdown
-- Health: X/10 (Sleep, Exercise, Diet signals)
-- Wealth: X/10 (Spending discipline vs goals)
-- Work: X/10 (Deep work vs busy work)
-- Spiritual: X/10 (Reflection, reading, meditation)
-- Relationships: X/10 (Social interaction, family)
-
-## Summary
-<A 2-3 sentence high-level executive summary of the day.>
-
-## Strategic Strengths
-- <Evidence-based positive pattern>
-
-## Critical Weaknesses
-- <Evidence-based negative pattern or neglect>
-
-## Cross-Domain Insights
-- <How one pillar affected another (e.g., poor sleep leading to impulsive spending)>
-
-## Recommendations for Tomorrow
-- <Exact, actionable step>
-
----
-
-## STYLE GUIDELINES
-- Be analytical, not generic. 
-- Use evidence from the logs (e.g., "The 3PM expense on junk food suggests a mid-afternoon energy crash").
-- Focus on the *why* behind the *what*.
-`;
-  }
-
-  if (type === 'weekly_report') {
-    return `You are a systems thinker and life strategist.
-    
-Evaluate the user's week based on aggregated data. Look for trajectories, consistency, and structural life issues.
-
-## INPUT DATA
-${payload}
-
----
-
-## OUTPUT REQUIREMENTS (STRICT FORMAT)
-
-# Weekly Life Systems Audit
-
-## Life Score
-<0-100 score reflecting weekly sustainability and progress.>
-
-## Pillar Averages
-- Health: X/10
-- Wealth: X/10
-- Work: X/10
-- Spiritual: X/10
-- Relationships: X/10
-
-## Executive Summary
-<Overview of the week's trajectory.>
-
-## Major Wins
-- <High-impact achievements>
-
-## Friction Points
-- <What consistently failed or caused stress>
-
-## Habit Sustainability
-- <Are habits sticking or breaking down?>
-
-## Financial Alignment
-- <Is spending supporting long-term goals or just immediate gratificaton?>
-
-## Strategic Recommendations
-- <3 high-level changes for next week>
-
----
-
-## STYLE
-- Macro-focused.
-- Look for consistency patterns.
-- Be strategic and direct.
-`;
-  }
-
-  // Monthly Report
-  return `You are a long-term life analyst.
-
-You evaluate a user’s life over a month using:
-- Weekly reports
-- Aggregated time data
-- Habit consistency
-- Expense behavior
-
-Your goal is to assess life direction, balance, and long-term sustainability.
 
 ---
 
 ## ANALYSIS REQUIREMENTS
 
-1. Life Balance:
-- Are all pillars consistently maintained?
-
-2. Discipline:
-- Are habits stable or inconsistent?
-
-3. Financial Alignment:
-- Does spending reflect priorities?
-
-4. Structural Patterns:
-- Recurring issues (sleep, waste, isolation, etc.)
-
-5. Trajectory:
-- Improving, declining, or stagnant?
+1. **Life Balance**: Are all pillars (Health, Finances, Work, Spiritual, Social) consistently maintained?
+2. **Trend Analysis**: Detect improvements or declines across the specific ${periodLabel}.
+3. **Rhythm Detection**: ${type !== 'daily_report' ? 'Identify which specific days or times were the most productive/problematic.' : 'Identify peak and friction moments of the day.'}
+4. **Discipline**: Are habits stable or inconsistent?
+5. **Financial Alignment**: Does spending reflect priorities or impulsivity?
 
 ---
 
-## OUTPUT FORMAT
+## OUTPUT FORMAT (STRICT)
 
-# Monthly Life Audit
+# ${periodLabel} Life Audit
 
 ## Life Score
-<0-100>
+<0-100 score reflecting total effectiveness/sustainability>
 
-## Pillar Scores
-- Health: X/10
-- Finances: X/10
-- Work: X/10
-- Spiritual: X/10
-- Social: X/10
+${type !== 'daily_report' ? `## Weekly Rhythm
+- Peak Performance: [Specific Day + Evidence from logs]
+- Critical Friction: [Specific Day + Evidence from logs]` : ''}
 
-## Summary
-<what kind of life is being built>
+## Pillar Audits
+- Health: [Score]/10 | [Analytical Note]
+- Finances: [Score]/10 | [Analytical Note]
+- Work: [Score]/10 | [Analytical Note]
+- Spiritual: [Score]/10 | [Analytical Note]
+- Social: [Score]/10 | [Analytical Note]
 
-## Strengths Developed
-- ...
+## Executive Summary
+<One sentence high-level overview of the ${periodLabel}'s trajectory>
 
-## Areas of Concern
-- ...
+## Strategic Strengths
+- <Evidence-based positive pattern>
+- <Evidence-based positive pattern>
 
-## Habit Stability
-- ...
-
-## Financial Patterns
-- ...
+## Critical Weaknesses
+- <Evidence-based negative pattern or neglect>
+- <Evidence-based negative pattern or neglect>
 
 ## Cross-Domain Insights
-- ...
+- <How one pillar affected another (e.g., poor sleep leading to low focus at work)>
 
-## Recommendations
-- ...
-- ...
-- ...
-
----
-
-## STYLE
-
-- Balanced
-- Strategic
-- Honest
+## High-Impact Recommendations
+- <Exact, actionable step for the next period>
+- <Exact, actionable step for the next period>
+- <Exact, actionable step for the next period>
 
 ---
 
-## RULE
-
-Focus on patterns, not isolated events.
-
-Example:
-“Work consistency improved, but health and financial discipline remain unstable.”
-
-Logs:
-${payload}
+## STYLE GUIDELINES
+- Be analytical, not generic. 
+- Use evidence from the logs (e.g., "The 3PM expense suggests a mid-afternoon energy crash").
+- Focus on the *why* behind the *what*.
 `;
 };
 

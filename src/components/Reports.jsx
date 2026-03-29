@@ -5,10 +5,12 @@ import {
   Bot, RefreshCw, AlertCircle, Clock, ChevronLeft, 
   ChevronRight, Zap, Target, TrendingUp, TrendingDown, 
   ShieldCheck, AlertTriangle, Lightbulb, Compass,
-  Heart, Wallet, Briefcase, Sparkles, Users
+  Heart, Wallet, Briefcase, Sparkles, Users,
+  CheckCircle2, Circle
 } from 'lucide-react';
-import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths, formatISO } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths, formatISO, eachDayOfInterval } from 'date-fns';
 import { useToast } from './Toaster';
+import { useHabitLogs, useHabits } from '../hooks/useHabits';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../db/supabase';
 
@@ -27,6 +29,76 @@ const PILLAR_COLORS = {
   Spiritual: 'from-purple-500 to-pink-600',
   Social: 'from-rose-500 to-red-600'
 };
+
+function WeeklyHabitGrid({ startDate, endDate }) {
+  const habits = useHabits() || [];
+  const logs = useHabitLogs() || [];
+  
+  const days = useMemo(() => {
+    try {
+      return eachDayOfInterval({ start: new Date(startDate), end: new Date(endDate) });
+    } catch {
+      return [];
+    }
+  }, [startDate, endDate]);
+
+  if (!habits || habits.length === 0 || days.length === 0) return null;
+
+  return (
+    <div className="glass-panel p-8 rounded-[32px] overflow-hidden relative group">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#818cf8]/5 to-transparent opacity-30 group-hover:opacity-60 transition-opacity"></div>
+      <div className="relative z-10 space-y-6">
+        <div className="grid grid-cols-[1fr,auto] items-center gap-4">
+           <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em]">Weekly Continuity</h3>
+           <div className="flex gap-1 pr-1">
+             {days.map(d => (
+               <span key={d.toISOString()} className="w-8 text-center text-[9px] font-black text-gray-600 uppercase">
+                 {format(d, 'eeeee')}
+               </span>
+             ))}
+           </div>
+        </div>
+
+        <div className="space-y-3">
+          {habits.map(habit => (
+            <div key={habit.id} className="grid grid-cols-[1fr,auto] items-center gap-4 group/row">
+              <span className="text-sm font-bold text-gray-400 group-hover/row:text-white transition-colors truncate pr-2">
+                {habit.name}
+              </span>
+              <div className="flex gap-1 shrink-0">
+                {days.map(day => {
+                  const dayLog = logs?.find(l => l.habit_id === habit.id && isSameDay(new Date(l.date_string), day));
+                  const isDone = !!dayLog;
+                  const isPartial = dayLog && habit.target_value && (dayLog.value < habit.target_value);
+
+                  return (
+                    <motion.div
+                      key={day.toISOString()}
+                      initial={false}
+                      animate={{ 
+                        backgroundColor: isDone ? '#818cf8' : 'rgba(255,255,255,0.03)',
+                        opacity: isPartial ? 0.45 : 1,
+                        boxShadow: (isDone && !isPartial) ? '0 0 12px rgba(129,140,248,0.5)' : 'none'
+                      }}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center transition-all border border-white/5"
+                    >
+                      {isDone && (
+                        <CheckCircle2 
+                          size={14} 
+                          className={isPartial ? 'text-white/60' : 'text-white'} 
+                        />
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Reports() {
   const toast = useToast();
@@ -96,10 +168,23 @@ export function Reports() {
     const pillars = [];
     const textLines = [];
     let discoveredScore = null;
-    
+
+    // Extract Score
     const scoreMatch = content.match(/Life Score[:\s]*(\d+)/i);
     if (scoreMatch) discoveredScore = parseInt(scoreMatch[1], 10);
-    
+
+    // Extract Weekly Rhythm (New Section)
+    const rhythmSectionRegex = /## Weekly Rhythm([\s\S]*?)(##|$)/i;
+    const rhythmSectionMatch = content.match(rhythmSectionRegex);
+    const weeklyRhythm = { peak: '', friction: '' };
+    if (rhythmSectionMatch) {
+       const rhythmLines = rhythmSectionMatch[1].trim().split('\n');
+       rhythmLines.forEach(line => {
+          if (line.match(/Peak Performance:/i)) weeklyRhythm.peak = line.replace(/.*Peak Performance:\s*/i, '').trim();
+          if (line.match(/Critical Friction:/i)) weeklyRhythm.friction = line.replace(/.*Critical Friction:\s*/i, '').trim();
+       });
+    }
+
     const lines = content.split('\n');
     let currentSection = null;
 
@@ -107,8 +192,8 @@ export function Reports() {
       line = line.trim();
       if (!line) continue;
 
-      // Extract Pillars (Unified naming for Finances and Social)
-      const pillarMatch = line.match(/^[-*]\s*(Health|Wealth|Finances|Work|Spiritual|Relationships|Social):\s*(\d+)[^0-9]?\/?10[-:.\s(]*(.*?)\)*$/i);
+      // Extract Pillars (Handling Note capture with | or :)
+      const pillarMatch = line.match(/^[-*]\s*(Health|Wealth|Finances|Work|Spiritual|Relationships|Social):\s*(\d+)[^0-9]?\/10\s*[|:-]\s*(.*)$/i);
       if (pillarMatch) {
          let name = pillarMatch[1].charAt(0).toUpperCase() + pillarMatch[1].slice(1).toLowerCase();
          // Standardize to current UI naming
@@ -118,23 +203,24 @@ export function Reports() {
          pillars.push({
             name: name,
             score: parseInt(pillarMatch[2], 10),
-            note: pillarMatch[3] ? pillarMatch[3].replace(/\)$/, '').trim() : ''
+            note: pillarMatch[3] ? pillarMatch[3].replace(/\)*$/, '').replace(/^\(/, '').trim() : ''
          });
          continue;
       }
 
-      // Handle Sections
+      // Handle Sections (Aligned with worker.js prompts)
       if (line.match(/^#+\s*(Strategic )?Strengths/i)) { currentSection = 'strengths'; continue; }
       if (line.match(/^#+\s*(Critical )?Weaknesses/i)) { currentSection = 'weaknesses'; continue; }
       if (line.match(/^#+\s*Cross-Domain Insights/i)) { currentSection = 'insights'; continue; }
-      if (line.match(/^#+\s*(Recommendations|Suggestions)/i)) { currentSection = 'recommendations'; continue; }
+      if (line.match(/^#+\s*(High-Impact Recommendations|Recommendations|Suggestions)/i)) { currentSection = 'recommendations'; continue; }
       if (line.match(/^#+\s*(Summary|Executive Summary)/i)) { currentSection = 'summary'; continue; }
 
       textLines.push({ section: currentSection, text: line });
     }
 
-    return { pillars, textLines, score: discoveredScore || latestReport.score || 0 };
+    return { pillars, textLines, weeklyRhythm, score: discoveredScore || latestReport.score || 0 };
   }, [latestReport]);
+  
 
   const renderDateLabel = (dateStr, type) => {
     if (!dateStr) return 'Active Period';
@@ -150,7 +236,7 @@ export function Reports() {
     return format(d, 'MMM do, yyyy');
   };
 
-  const isToday = isSameDay(currentDate, new Date());
+  const isToday = safeIsSameDay(currentDate, new Date());
 
   return (
     <div className="max-w-4xl mx-auto px-4 pt-6 pb-20 space-y-10">
@@ -310,6 +396,56 @@ export function Reports() {
               </div>
             </div>
           </div>
+
+          {/* Weekly Rhythm - Dynamic Strategic Insights for Non-Daily Reports */}
+          {activeTab !== 'daily_report' && parsed.weeklyRhythm && (parsed.weeklyRhythm.peak || parsed.weeklyRhythm.friction) && (
+            <motion.div 
+               initial={{ opacity: 0, y: 15 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ delay: 0.2 }}
+               className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            >
+               <div className="glass-panel p-8 rounded-[32px] bg-emerald-500/[0.02] border-emerald-500/20 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="flex items-center gap-4 mb-4 relative z-10">
+                     <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-900/20">
+                        <TrendingUp size={20} />
+                     </div>
+                     <p className="text-[12px] font-black text-emerald-400 uppercase tracking-[0.25em]">Peak Performance</p>
+                  </div>
+                  <p className="text-xl font-bold text-emerald-50/90 leading-tight relative z-10">
+                     {parsed.weeklyRhythm.peak || "Analyzing peak trajectory..."}
+                  </p>
+               </div>
+
+               <div className="glass-panel p-8 rounded-[32px] bg-rose-500/[0.02] border-rose-500/20 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-rose-500/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="flex items-center gap-4 mb-4 relative z-10">
+                     <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-400 shadow-lg shadow-rose-900/20">
+                        <TrendingDown size={20} />
+                     </div>
+                     <p className="text-[12px] font-black text-rose-400 uppercase tracking-[0.25em]">Critical Friction</p>
+                  </div>
+                  <p className="text-xl font-bold text-rose-50/90 leading-tight relative z-10">
+                     {parsed.weeklyRhythm.friction || "Identifying systemic friction..."}
+                  </p>
+               </div>
+            </motion.div>
+          )}
+
+          {/* Weekly Habit Continuity - Only for Non-Daily Reports */}
+          {activeTab !== 'daily_report' && (
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.98 }}
+               animate={{ opacity: 1, scale: 1 }}
+               transition={{ delay: 0.3 }}
+            >
+               <WeeklyHabitGrid 
+                  startDate={activeTab === 'weekly_report' ? startOfWeek(currentDate, { weekStartsOn: 1 }) : startOfMonth(currentDate)}
+                  endDate={activeTab === 'weekly_report' ? endOfWeek(currentDate, { weekStartsOn: 1 }) : endOfMonth(currentDate)}
+               />
+            </motion.div>
+          )}
 
           {/* Pillars Grid - Standardized & Improved Metrics */}
           {/* Pillars Grid - Vertically Organized for Clarity */}
