@@ -1,17 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useReportsByType, useJobsByType, requestReport } from '../hooks/useReports';
 import { buildReportPayload } from '../utils/payloadBuilder';
-import { Bot, RefreshCw, AlertCircle, Clock, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { 
+  Bot, RefreshCw, AlertCircle, Clock, ChevronLeft, 
+  ChevronRight, Zap, Target, TrendingUp, TrendingDown, 
+  ShieldCheck, AlertTriangle, Lightbulb, Compass,
+  Heart, Wallet, Briefcase, Sparkles, Users
+} from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths, formatISO } from 'date-fns';
 import { useToast } from './Toaster';
-// eslint-disable-next-line no-unused-vars
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../db/supabase';
+
+const PILLAR_ICONS = {
+  Health: <Heart size={16} />,
+  Finances: <Wallet size={16} />,
+  Work: <Briefcase size={16} />,
+  Spiritual: <Sparkles size={16} />,
+  Social: <Users size={16} />
+};
+
+const PILLAR_COLORS = {
+  Health: 'from-emerald-500 to-teal-600',
+  Finances: 'from-amber-400 to-orange-500',
+  Work: 'from-blue-500 to-indigo-600',
+  Spiritual: 'from-purple-500 to-pink-600',
+  Social: 'from-rose-500 to-red-600'
+};
 
 export function Reports() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('daily_report');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [loading, setLoading] = useState(false);
 
   const safeIsSameDay = (d1, d2) => {
     if (!d1 || !d2) return false;
@@ -27,27 +48,14 @@ export function Reports() {
   const latestReport = allReports.find(r => safeIsSameDay(r.start_date || r.created_at, currentDate));
   const activeJobs = allJobs.filter(j => j.status !== 'completed' && safeIsSameDay(j.meta?.start_date || j.created_at, currentDate));
 
-  const [loading, setLoading] = useState(false);
-
   const tabs = [
-    { id: 'daily_report', label: 'Daily' },
-    { id: 'weekly_report', label: 'Weekly' },
-    { id: 'monthly_report', label: 'Monthly' }
+    { id: 'daily_report', label: 'Daily', icon: <Target size={14} /> },
+    { id: 'weekly_report', label: 'Weekly', icon: <Compass size={14} /> },
+    { id: 'monthly_report', label: 'Monthly', icon: <TrendingUp size={14} /> }
   ];
 
-  const lastRunTime = React.useRef(0);
-
   const handleGenerate = async () => {
-    // Abuse protection: Rate limit Force Run to 1 request per 30 seconds
-    if (Date.now() - lastRunTime.current < 30000) {
-       toast.error("Rate limit active: Please wait 30 seconds before forcing another run.");
-       return;
-    }
-    lastRunTime.current = Date.now();
-
     setLoading(true);
-    let payload = `Triggered manual ${activeTab} analysis request for period ending ${currentDate.toLocaleDateString()}.`;
-    
     let start, end;
     if (activeTab === 'daily_report') {
        start = startOfDay(currentDate).getTime();
@@ -61,8 +69,6 @@ export function Reports() {
     }
     try {
       const result = await buildReportPayload(start, end);
-      payload = result.payload;
-      
       if (result.isEmpty) {
         toast.error('No activities or logs for this period to analyze.');
         return;
@@ -73,11 +79,10 @@ export function Reports() {
          await supabase.from('llm_jobs').delete().in('id', failedIds);
       }
       
-      await requestReport(payload, activeTab, { start_date: formatISO(currentDate) });
-      toast.success(`${tabs.find(t => t.id === activeTab).label} Report generation queued! Check the Job Tracker.`);
+      await requestReport(result.payload, activeTab, { start_date: formatISO(currentDate) });
+      toast.success(`${tabs.find(t => t.id === activeTab).label} analysis queued!`);
     } catch (error) {
-      console.error(error);
-      toast.error(error.message || 'Failed to submit report parameters.');
+      toast.error(error.message || 'Failed to submit analysis.');
     } finally {
       setLoading(false);
     }
@@ -85,260 +90,405 @@ export function Reports() {
 
   const isGenerating = activeJobs.some(j => j.status === 'pending' || j.status === 'processing') || loading;
 
-  const renderDateLabel = (dateStr, type) => {
-      if (!dateStr) return 'Active Period';
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return 'Active Period';
-      
-      try {
-          if (type === 'daily_report') return format(d, 'EEEE, MMM do');
-          if (type === 'weekly_report') {
-              const dStart = startOfWeek(d, { weekStartsOn: 1 });
-              const dEnd = endOfWeek(d, { weekStartsOn: 1 });
-              if (dStart.getMonth() === dEnd.getMonth()) {
-                  return `${format(dStart, 'd')} - ${format(dEnd, 'd MMM')}`;
-              } else {
-                  return `${format(dStart, 'd MMM')} - ${format(dEnd, 'd MMM')}`;
-              }
-          }
-          if (type === 'monthly_report') return format(d, 'MMMM yyyy');
-          return format(d, 'MMM do, yyyy');
-      } catch (_e) {
-          return 'Analysis Period';
+  const parsed = useMemo(() => {
+    if (!latestReport?.content) return null;
+    const content = latestReport.content;
+    const pillars = [];
+    const textLines = [];
+    let discoveredScore = null;
+    
+    const scoreMatch = content.match(/Life Score[:\s]*(\d+)/i);
+    if (scoreMatch) discoveredScore = parseInt(scoreMatch[1], 10);
+    
+    const lines = content.split('\n');
+    let currentSection = null;
+
+    for (let line of lines) {
+      line = line.trim();
+      if (!line) continue;
+
+      // Extract Pillars (Unified naming for Finances and Social)
+      const pillarMatch = line.match(/^[-*]\s*(Health|Wealth|Finances|Work|Spiritual|Relationships|Social):\s*(\d+)[^0-9]?\/?10[-:.\s(]*(.*?)\)*$/i);
+      if (pillarMatch) {
+         let name = pillarMatch[1].charAt(0).toUpperCase() + pillarMatch[1].slice(1).toLowerCase();
+         // Standardize to current UI naming
+         if (name === 'Wealth') name = 'Finances';
+         if (name === 'Relationships') name = 'Social';
+
+         pillars.push({
+            name: name,
+            score: parseInt(pillarMatch[2], 10),
+            note: pillarMatch[3] ? pillarMatch[3].replace(/\)$/, '').trim() : ''
+         });
+         continue;
       }
+
+      // Handle Sections
+      if (line.match(/^#+\s*(Strategic )?Strengths/i)) { currentSection = 'strengths'; continue; }
+      if (line.match(/^#+\s*(Critical )?Weaknesses/i)) { currentSection = 'weaknesses'; continue; }
+      if (line.match(/^#+\s*Cross-Domain Insights/i)) { currentSection = 'insights'; continue; }
+      if (line.match(/^#+\s*(Recommendations|Suggestions)/i)) { currentSection = 'recommendations'; continue; }
+      if (line.match(/^#+\s*(Summary|Executive Summary)/i)) { currentSection = 'summary'; continue; }
+
+      textLines.push({ section: currentSection, text: line });
+    }
+
+    return { pillars, textLines, score: discoveredScore || latestReport.score || 0 };
+  }, [latestReport]);
+
+  const renderDateLabel = (dateStr, type) => {
+    if (!dateStr) return 'Active Period';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'Active Period';
+    if (type === 'daily_report') return format(d, 'EEEE, MMM do');
+    if (type === 'weekly_report') {
+        const dStart = startOfWeek(d, { weekStartsOn: 1 });
+        const dEnd = endOfWeek(d, { weekStartsOn: 1 });
+        return `${format(dStart, 'd MMM')} - ${format(dEnd, 'd MMM')}`;
+    }
+    if (type === 'monthly_report') return format(d, 'MMMM yyyy');
+    return format(d, 'MMM do, yyyy');
   };
 
   const isToday = isSameDay(currentDate, new Date());
 
-  // Graphical Text Parser
-  const parseReportContent = (content) => {
-    try {
-      if (!content || typeof content !== 'string') return { pillars: [], textLines: [], discoveredScore: null };
-
-      const textLines = [];
-      const pillars = [];
-      let discoveredScore = null;
-      
-      const scoreMatch = content.match(/Life Score[\s\S]*?(\d+)/i);
-      if (scoreMatch) discoveredScore = parseInt(scoreMatch[1], 10);
-      
-      let skipNext = false;
-      const lines = content.split('\n');
-      for (let i = 0; i < lines.length; i++) {
-        if (skipNext) { 
-           skipNext = false; 
-           continue; 
-        }
-        
-        let line = lines[i].trim();
-        if (!line) continue;
-        
-        if (line.match(/^\*?\s*\*?(Daily|Weekly|Monthly)\s+Life\s+(Report|Audit)\b/i)) continue;
-        if (line.match(/^#+\s*Life Score/i)) {
-           if (lines[i+1]?.trim().match(/^\d+/)) skipNext = true; 
-           continue;
-        }
-        if (line.match(/^#+\s*Pillar (Breakdown|Averages|Scores)/i)) continue;
-        
-        const pillarMatch = line.match(/^[-*]\s*(Health|Wealth|Work|Spiritual|Relationships):\s*(\d+)[^0-9]?\/?10[-:.\s(]*(.*?)\)*$/i);
-        if (pillarMatch) {
-           pillars.push({
-              name: pillarMatch[1],
-              score: parseInt(pillarMatch[2], 10),
-              note: pillarMatch[3] ? pillarMatch[3].replace(/\)$/, '').trim() : ''
-           });
-           continue;
-        }
-        
-        textLines.push(line);
-      }
-      return { pillars, textLines, discoveredScore };
-    } catch (e) {
-      console.error(e);
-      return { pillars: [], textLines: [content || ''], discoveredScore: null };
-    }
-  };
-
-  const parsed = latestReport && latestReport.content ? parseReportContent(latestReport.content) : null;
-  const displayScore = (parsed && parsed.discoveredScore !== null) ? parsed.discoveredScore : (latestReport?.score || 0);
-
   return (
-    <div className="space-y-6 pt-4 px-2 pb-6">
-      <header className="flex justify-between items-center mb-4">
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">AI Reports</h1>
+    <div className="max-w-4xl mx-auto px-4 pt-6 pb-20 space-y-10">
+      {/* Centered Header Section */}
+      <header className="flex flex-col items-center text-center space-y-4">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black text-white tracking-tighter glow-text-primary">Life Audit</h1>
+          <p className="text-gray-500 font-medium text-sm flex items-center justify-center gap-2">
+            <Bot size={14} className="text-[#818cf8]" /> Powered by AI Systems
+          </p>
+        </div>
         <button 
            onClick={handleGenerate}
            disabled={isGenerating}
-           className="bg-[#818cf8]/10 hover:bg-[#818cf8]/20 text-[#818cf8] px-3 py-2 rounded-xl text-sm font-bold border border-[#818cf8]/20 transition-colors disabled:opacity-50 disabled:cursor-wait flex items-center gap-2 shrink-0"
+           className="relative group overflow-hidden bg-[#818cf8] hover:bg-[#818cf8]/90 text-white px-8 py-3 rounded-2xl text-sm font-black transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-500/25"
         >
-           {isGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Zap size={14} />}
-           Force Run
+           {isGenerating ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} />}
+           <span>{isGenerating ? 'Analyzing...' : 'Generate New Audit'}</span>
+           <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
         </button>
       </header>
 
-      <div className="flex bg-[#12121A] p-1 rounded-xl mb-4 border border-gray-800 shadow-sm">
-        {tabs.map(tab => (
-           <button 
-             key={tab.id}
-             onClick={() => setActiveTab(tab.id)}
-             className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-colors ${activeTab === tab.id ? 'bg-[#818cf8]/20 text-[#818cf8]' : 'text-gray-500 hover:text-gray-300'}`}
-           >
-             {tab.label}
-           </button>
-        ))}
-      </div>
-
-      <div className="flex justify-between items-center mb-6 bg-[#0B0B0F] border border-gray-800 rounded-2xl p-2 shadow-inner">
-        <button onClick={() => {
-            if (activeTab === 'weekly_report') setCurrentDate(subDays(currentDate, 7));
-            else if (activeTab === 'monthly_report') setCurrentDate(subMonths(currentDate, 1));
-            else setCurrentDate(subDays(currentDate, 1));
-        }} className="p-2 text-gray-400 hover:text-white transition rounded-xl hover:bg-gray-800/50">
-           <ChevronLeft size={20} />
-        </button>
-        <div className="text-center">
-          <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-0.5">Target Period</p>
-          <p className="text-sm font-bold text-gray-200">{renderDateLabel(formatISO(currentDate), activeTab)}</p>
+      {/* Tabs & Controls - Explicitly Centered */}
+      <div className="space-y-4 max-w-2xl mx-auto w-full">
+        <div className="flex bg-[#12121A] p-1.5 rounded-2xl border border-white/5 shadow-inner">
+          {tabs.map(tab => (
+             <button 
+               key={tab.id}
+               onClick={() => setActiveTab(tab.id)}
+               className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-black rounded-xl transition-all ${activeTab === tab.id ? 'bg-[#818cf8]/10 text-[#818cf8] shadow-sm border border-[#818cf8]/20' : 'text-gray-500 hover:text-gray-300'}`}
+             >
+               {tab.icon}
+               {tab.label}
+             </button>
+          ))}
         </div>
-        <button 
-           onClick={() => {
-              let nextD;
-              if (activeTab === 'weekly_report') nextD = addDays(currentDate, 7);
-              else if (activeTab === 'monthly_report') nextD = addMonths(currentDate, 1);
-              else nextD = addDays(currentDate, 1);
-              
-              if (nextD > new Date()) nextD = new Date();
-              setCurrentDate(nextD);
-           }} 
-           disabled={isToday}
-           className={`p-2 transition rounded-xl ${isToday ? 'text-gray-800 cursor-not-allowed' : 'text-gray-400 hover:text-white hover:bg-gray-800/50'}`}
-        >
-           <ChevronRight size={20} />
-        </button>
-      </div>
 
-      {activeJobs.length > 0 && (
-          <div className="space-y-3 mb-6 animate-in fade-in slide-in-from-top-2">
-             {activeJobs.map(job => (
-                <div key={job.id} className={`flex items-center gap-3 p-4 rounded-2xl border ${job.status === 'failed' ? 'bg-red-950/20 border-red-900/50' : 'bg-[#12121A] border-gray-800'} shadow-sm`}>
-                   {job.status === 'pending' && <Clock size={18} className="text-yellow-500" />}
-                   {job.status === 'processing' && <RefreshCw size={18} className="text-[#818cf8] animate-spin" />}
-                   {job.status === 'failed' && <AlertCircle size={18} className="text-red-400" />}
-                   
-                   <div className="flex-1">
-                      <p className="text-sm font-bold text-white uppercase tracking-widest">{job.status}</p>
-                      <p className="text-xs text-gray-500">
-                         For {renderDateLabel(job.meta?.start_date || job.created_at, job.type)}
-                      </p>
-                   </div>
-                </div>
-             ))}
-          </div>
-      )}
-
-      {latestReport && parsed ? (
-        <div className="bg-[#12121A] border border-[#818cf8]/20 rounded-3xl p-6 shadow-lg relative mt-2 animate-in fade-in slide-in-from-bottom-2 isolate overflow-hidden">
-          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#818cf8]/5 rounded-full blur-3xl -mr-20 -mt-20 -z-10 pointer-events-none"></div>
+        <div className="flex justify-between items-center glass-panel rounded-2xl p-2 h-14">
+          <button onClick={() => {
+              if (activeTab === 'weekly_report') setCurrentDate(subDays(currentDate, 7));
+              else if (activeTab === 'monthly_report') setCurrentDate(subMonths(currentDate, 1));
+              else setCurrentDate(subDays(currentDate, 1));
+          }} className="p-3 text-gray-400 hover:text-white transition rounded-xl hover:bg-white/5">
+             <ChevronLeft size={20} />
+          </button>
           
-          <div className="flex justify-between items-end mb-8 border-b border-gray-800/60 pb-5">
-             <div>
-                 <span className="text-[11px] text-[#818cf8] uppercase tracking-widest font-black mb-1.5 block">Analyzed Period</span>
-                 <span className="text-2xl font-black text-white tracking-tight">
-                     {renderDateLabel(latestReport.start_date, latestReport.type)}
-                 </span>
-             </div>
-             <div className="text-right">
-                 <span className="text-gray-500 font-bold text-[10px] uppercase tracking-widest block mb-0.5">Life Score</span>
-                 <span className="text-5xl font-black text-white leading-none tracking-tighter tabular-nums drop-shadow-[0_0_15px_rgba(129,140,248,0.2)]">{displayScore}</span>
-             </div>
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div 
+              key={currentDate.toISOString() + activeTab}
+              initial={{ y: 5, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -5, opacity: 0 }}
+              className="text-center"
+            >
+              <p className="text-[10px] font-black text-[#818cf8] uppercase tracking-[0.2em] mb-0.5">Analysis Period</p>
+              <p className="text-sm font-bold text-gray-200">{renderDateLabel(currentDate, activeTab)}</p>
+            </motion.div>
+          </AnimatePresence>
 
-          {parsed.pillars.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 mb-8 relative z-10">
-               {parsed.pillars.map(p => {
-                  const percentage = Math.min(100, Math.max(0, p.score * 10));
-                  let colorClass = 'bg-[#818cf8] shadow-[0_0_10px_rgba(129,140,248,0.3)]'; 
-                  let textColor = 'text-[#818cf8]';
-                  
-                  if (p.score <= 3) {
-                      colorClass = 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]';
-                      textColor = 'text-red-400';
-                  } else if (p.score <= 5) {
-                      colorClass = 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]';
-                      textColor = 'text-amber-400';
-                  } else if (p.score >= 8) {
-                      colorClass = 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.3)]';
-                      textColor = 'text-emerald-400';
-                  }
-                  
-                  return (
-                    <div key={p.name} className="bg-[#0B0B0F]/80 border border-gray-800/80 rounded-2xl p-4 transition-all hover:bg-[#0B0B0F]/100">
-                       <div className="flex justify-between items-end mb-3">
-                          <span className="font-extrabold text-white text-sm uppercase tracking-widest">{p.name}</span>
-                          <span className={`font-black text-xl tabular-nums leading-none ${textColor}`}>{p.score}<span className="text-gray-600 text-sm">/10</span></span>
-                       </div>
-                       
-                       <div className="h-1.5 w-full bg-gray-900 rounded-full overflow-hidden mb-3">
-                          <motion.div 
-                            initial={{ width: 0 }} 
-                            animate={{ width: `${percentage}%` }} 
-                            transition={{ duration: 1.2, ease: "easeOut", delay: 0.1 }}
-                            className={`h-full rounded-full ${colorClass}`}
-                          />
-                       </div>
-                       
-                       {p.note && <p className="text-xs text-gray-400 leading-relaxed font-medium">{p.note}</p>}
-                    </div>
-                  );
-               })}
-            </div>
-          )}
-
-          <div className="space-y-1 relative z-10 pr-2">
-              {parsed.textLines.map((line, i) => {
-                 if (line.match(/^#+\s+(.*)/)) {
-                     const headerText = line.match(/^#+\s+(.*)/)[1];
-                     return (
-                        <h3 key={i} className="font-black text-white text-md mt-7 mb-3 uppercase tracking-widest text-[#818cf8]">
-                           {headerText.replace(/\*/g, '')}
-                        </h3>
-                     );
-                 }
-                 if (line.startsWith('-') || line.startsWith('*')) {
-                     return (
-                        <div key={i} className="flex gap-3 mb-2.5 items-start">
-                           <div className="w-1.5 h-1.5 rounded-full bg-[#818cf8]/50 mt-2 shrink-0"></div>
-                           <p className="text-gray-300 text-[15px] font-medium leading-relaxed">
-                              {line.replace(/^[-*]\s*/, '').replace(/\*/g, '')}
-                           </p>
-                        </div>
-                     );
-                 }
-                 if (line.match(/^\d+\./)) {
-                     return (
-                        <div key={i} className="flex gap-3 mt-4 mb-3 p-4 bg-gray-900/30 border border-gray-800/50 rounded-xl items-start">
-                           <span className="font-black text-[#818cf8] text-lg leading-none shrink-0">{line.match(/^(\d+\.)/)[1]}</span>
-                           <span className="text-gray-200 text-[15px] font-medium leading-relaxed">
-                              {line.replace(/^\d+\.\s*/, '').replace(/\*/g, '')}
-                           </span>
-                        </div>
-                     );
-                 }
-                 return <p key={i} className="text-[14px] text-gray-400 font-medium leading-relaxed mb-3">{line.replace(/\*/g, '')}</p>
-              })}
-          </div>
+          <button 
+             onClick={() => {
+                let nextD;
+                if (activeTab === 'weekly_report') nextD = addDays(currentDate, 7);
+                else if (activeTab === 'monthly_report') nextD = addMonths(currentDate, 1);
+                else nextD = addDays(currentDate, 1);
+                if (nextD > new Date()) nextD = new Date();
+                setCurrentDate(nextD);
+             }} 
+             disabled={isToday}
+             className={`p-3 transition rounded-xl ${isToday ? 'opacity-20 cursor-not-allowed' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+          >
+             <ChevronRight size={20} />
+          </button>
         </div>
-      ) : (
-        activeJobs.length === 0 && (
-            <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-10 flex flex-col items-center justify-center text-center mt-6 animate-in fade-in zoom-in-95">
-                <div className="w-16 h-16 bg-[#0B0B0F] rounded-full flex items-center justify-center mb-4 border border-gray-800 ring-1 ring-white/5">
-                    <Bot size={28} className="text-gray-500" />
+      </div>
+
+      {/* Active Jobs Tracker */}
+      <AnimatePresence>
+        {activeJobs.map(job => (
+          <motion.div 
+            key={job.id}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden max-w-2xl mx-auto w-full"
+          >
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#818cf8]/5 border border-[#818cf8]/20 mb-4">
+              <RefreshCw size={18} className="text-[#818cf8] animate-spin" />
+              <div className="flex-1">
+                <p className="text-xs font-black text-white uppercase tracking-widest">Audit in Progress</p>
+                <div className="w-full h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
+                  <motion.div 
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '100%' }}
+                    transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                    className="w-1/2 h-full bg-[#818cf8]"
+                  />
                 </div>
-                <h3 className="text-white font-bold mb-2 text-lg">No {tabs.find(t => t.id === activeTab).label} Reports</h3>
-                <p className="text-gray-500 text-sm max-w-[200px] mt-1">
-                   {isToday ? 'Reports automatically generate at midnight' : 'No retroactive analysis found for this date.'}
-                </p>
+              </div>
             </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {/* Main Report Content - Centered Symmetry */}
+      {parsed ? (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-12"
+        >
+          {/* Centered Life Score & Summary Card */}
+          <div className="glass-panel rounded-[40px] p-10 relative overflow-hidden text-center group">
+            <div className="absolute top-0 inset-x-0 mx-auto w-64 h-64 bg-[#818cf8]/10 rounded-full blur-[80px] -mt-32"></div>
+            
+            <div className="flex flex-col items-center gap-8 relative z-10">
+              {/* Score Indicator */}
+              <div className="relative w-48 h-48 shrink-0">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="85"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.03)"
+                    strokeWidth="14"
+                  />
+                  <motion.circle
+                    cx="96"
+                    cy="96"
+                    r="85"
+                    fill="none"
+                    stroke="#818cf8"
+                    strokeWidth="14"
+                    strokeDasharray={534}
+                    initial={{ strokeDashoffset: 534 }}
+                    animate={{ strokeDashoffset: 534 - (534 * parsed.score) / 100 }}
+                    transition={{ duration: 2, ease: "easeOut" }}
+                    strokeLinecap="round"
+                    className="drop-shadow-[0_0_15px_rgba(129,140,248,0.4)]"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-5xl font-black text-white tracking-tighter glow-text-primary">{parsed.score}</span>
+                  <span className="text-[11px] font-black text-gray-500 uppercase tracking-widest mt-1">Life Score</span>
+                </div>
+              </div>
+
+              {/* Summary Text */}
+              <div className="space-y-4 max-w-2xl px-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[#818cf8] text-[11px] font-black uppercase tracking-[0.25em]">
+                  Executive Summary
+                </div>
+                <p className="text-2xl font-bold text-gray-100 leading-snug">
+                  {parsed.textLines.find(l => l.section === 'summary')?.text.replace(/\*/g, '') || "Analyzing your system trajectory..."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Pillars Grid - Standardized & Improved Metrics */}
+          {/* Pillars Grid - Vertically Organized for Clarity */}
+          <div className="grid grid-cols-1 gap-6">
+            {Object.keys(PILLAR_COLORS).map((pillarName, i) => {
+              const p = parsed.pillars.find(x => x.name === pillarName) || { name: pillarName, score: 5, note: 'Insufficient data for active period.' };
+              return (
+                <motion.div 
+                  key={pillarName}
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="glass-panel p-8 rounded-[32px] group hover:border-[#818cf8]/30 transition-all cursor-default"
+                >
+                  <div className="space-y-6">
+                    {/* Header Row: Icon, Title, and Score */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-5">
+                        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${PILLAR_COLORS[pillarName]} flex items-center justify-center text-white shadow-lg shadow-black/20 shrink-0`}>
+                          {PILLAR_ICONS[pillarName]}
+                        </div>
+                        <p className="text-2xl font-black text-white uppercase tracking-tighter">
+                          {pillarName}
+                        </p>
+                      </div>
+                      <p className="text-3xl font-black text-white tracking-tighter">
+                        {p.score}<span className="text-xs text-gray-600 ml-1 font-bold">/ 10</span>
+                      </p>
+                    </div>
+
+                    {/* Progress Bar Row */}
+                    <div className="h-2.5 w-full bg-gray-900 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${p.score * 10}%` }}
+                        transition={{ duration: 1.2, delay: 0.3 + i * 0.1, ease: "easeOut" }}
+                        className={`h-full bg-gradient-to-r ${PILLAR_COLORS[pillarName]}`}
+                      />
+                    </div>
+
+                    {/* Analysis Note Row - Moving to bottom eliminates clutter */}
+                    {p.note && (
+                      <div className="pt-4 border-t border-white/5">
+                        <p className="text-base font-medium text-gray-400 leading-relaxed italic opacity-90">
+                          {p.note}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Insight Cards Section - Switch to 1-col for maximum legibility */}
+          <div className="space-y-12">
+            {/* Mirror Strengths & Weaknesses - Vertical Split for Breathing Room */}
+            <div className="space-y-10">
+              {/* Strengths */}
+              <div className="space-y-5">
+                <h3 className="flex items-center gap-2 text-[11px] font-black text-emerald-400 uppercase tracking-[0.2em] px-2">
+                  <ShieldCheck size={14} /> Strategic Strengths
+                </h3>
+                <div className="space-y-4">
+                  {parsed.textLines.filter(l => l.section === 'strengths').map((line, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.2 + i * 0.1 }}
+                      className="glass-panel p-6 rounded-3xl border-emerald-500/10 bg-emerald-500/5"
+                    >
+                      <p className="text-[16px] font-semibold text-emerald-100 leading-relaxed">
+                        {line.text.replace(/^[-*]\s*/, '').replace(/\*/g, '')}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Weaknesses */}
+              <div className="space-y-5">
+                <h3 className="flex items-center gap-2 text-[11px] font-black text-rose-400 uppercase tracking-[0.2em] px-2">
+                  <AlertTriangle size={14} /> Critical Weaknesses
+                </h3>
+                <div className="space-y-4">
+                  {parsed.textLines.filter(l => l.section === 'weaknesses').map((line, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.2 + i * 0.1 }}
+                      className="glass-panel p-5 rounded-2xl border-rose-500/10 bg-rose-500/5"
+                    >
+                      <p className="text-[16px] font-semibold text-rose-100 leading-relaxed">
+                        {line.text.replace(/^[-*]\s*/, '').replace(/\*/g, '')}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Cross-Domain Insights Section - Full Width Centered */}
+            <div className="space-y-5">
+              <h3 className="flex items-center gap-2 text-[11px] font-black text-purple-400 uppercase tracking-[0.2em] px-2">
+                <Lightbulb size={14} /> Cross-Domain Insights
+              </h3>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="glass-panel rounded-[32px] p-10 bg-purple-500/5 border-purple-500/20 relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-50"></div>
+                <div className="space-y-8 relative z-10">
+                  {parsed.textLines.filter(l => l.section === 'insights').map((line, i) => (
+                    <div key={i} className="flex gap-6 items-start">
+                      <div className="w-2 h-2 rounded-full bg-purple-500 mt-2.5 shrink-0 shadow-[0_0_10px_rgba(168,85,247,0.7)]"></div>
+                      <p className="text-[17px] font-medium text-gray-200 leading-relaxed italic">
+                        "{line.text.replace(/^[-*]\s*/, '').replace(/\*/g, '')}"
+                      </p>
+                    </div>
+                  ))}
+                  {parsed.textLines.filter(l => l.section === 'insights').length === 0 && (
+                    <p className="text-gray-600 italic">Identifying patterns across your life systems...</p>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Recommendations - Clean List Layout */}
+            <div className="space-y-6">
+              <h3 className="flex items-center gap-2 text-[11px] font-black text-[#818cf8] uppercase tracking-[0.25em] px-2">
+                <Compass size={14} /> Recommendations
+              </h3>
+              <div className="flex flex-col gap-5">
+                {parsed.textLines.filter(l => l.section === 'recommendations').map((line, i) => (
+                  <motion.div 
+                    key={i}
+                    whileHover={{ scale: 1.005, x: 5 }}
+                    className="flex gap-6 p-6 bg-white/5 border border-white/10 rounded-[28px] items-start group transition-all hover:bg-white/10 hover:border-[#818cf8]/40"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-[#818cf8]/10 flex items-center justify-center text-[#818cf8] font-black text-sm shrink-0 border border-[#818cf8]/20 group-hover:bg-[#818cf8] group-hover:text-white transition-all shadow-lg shadow-black/20">
+                      {i + 1}
+                    </div>
+                    <p className="text-lg font-bold text-gray-200 leading-relaxed mt-1">
+                      {line.text.replace(/^\d+\.\s*/, '').replace(/^[-*]\s*/, '').replace(/\*/g, '')}
+                    </p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        !isGenerating && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-20 text-center space-y-4"
+          >
+            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/10 relative">
+              <Bot size={40} className="text-gray-600" />
+              <div className="absolute inset-0 rounded-full bg-[#818cf8]/5 blur-xl animate-pulse"></div>
+            </div>
+            <h3 className="text-2xl font-black text-white tracking-tight">No Audit Found</h3>
+            <p className="text-gray-500 max-w-sm text-sm font-medium leading-relaxed">
+              {isToday 
+                ? "Your system audit is usually generated at the end of the day. You can force an audit now." 
+                : "No retroactive analysis found for this period."}
+            </p>
+            <button 
+              onClick={handleGenerate}
+              className="mt-6 px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black text-sm transition-all border border-white/10"
+            >
+              Start Analysis Now
+            </button>
+          </motion.div>
         )
       )}
     </div>

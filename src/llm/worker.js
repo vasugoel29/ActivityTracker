@@ -7,135 +7,69 @@ const buildPrompt = (job) => {
   const payload = job.payload;
   
   if (type === 'daily_report') {
-    return `You are a life analyst.
+    return `You are a world-class Life Systems Architect.
+    
+Analyze the following user data (time logs, habits, expenses) and provide a rigorous, unsentimental, and highly insightful life audit.
 
-You analyze a user's life using three data sources:
-1. Time logs (how time was spent)
-2. Habits (consistency indicators)
-3. Expenses (financial behavior)
-
-Your goal is to produce a balanced, accurate assessment of the user’s life across key pillars.
+## INPUT DATA
+${payload}
 
 ---
 
-## PILLARS
-
-- Health → sleep + physical activity
-- Wealth → spending behavior
-- Work → productive time
-- Spiritual → reflection / habits
-- Relationships → social time
-
----
-
-## ANALYSIS REQUIREMENTS
-
-1. Combine all inputs:
-- Time logs → actual behavior
-- Habits → consistency signals
-- Expenses → financial discipline
-
-2. Detect cross-effects:
-- Poor sleep → low productivity
-- High waste spending → impulsive behavior
-- No social time → relationship neglect
-
-3. Evaluate:
-- Strengths
-- Weaknesses
-- Imbalance across pillars
-
----
-
-## OUTPUT FORMAT
+## OUTPUT REQUIREMENTS (STRICT FORMAT)
 
 # Daily Life Report
 
 ## Life Score
-<0-100>
+<Provide a score from 0 to 100 based on discipline, balance, and productivity. Be honest.>
 
 ## Pillar Breakdown
-- Health: X/10
-- Wealth: X/10
-- Work: X/10
-- Spiritual: X/10
-- Relationships: X/10
+- Health: X/10 (Sleep, Exercise, Diet signals)
+- Wealth: X/10 (Spending discipline vs goals)
+- Work: X/10 (Deep work vs busy work)
+- Spiritual: X/10 (Reflection, reading, meditation)
+- Relationships: X/10 (Social interaction, family)
 
 ## Summary
-<balanced overview>
+<A 2-3 sentence high-level executive summary of the day.>
 
-## Strengths
-- ...
+## Strategic Strengths
+- <Evidence-based positive pattern>
 
-## Weaknesses
-- ...
+## Critical Weaknesses
+- <Evidence-based negative pattern or neglect>
 
-## Cross-Insights
-- ...
+## Cross-Domain Insights
+- <How one pillar affected another (e.g., poor sleep leading to impulsive spending)>
 
-## Suggestions
-- ...
-
----
-
-## STYLE
-
-- Balanced
-- Evidence-based
-- Clear and concise
+## Recommendations for Tomorrow
+- <Exact, actionable step>
 
 ---
 
-## RULE
-
-Use all three data sources.
-
-Do NOT ignore habits or expenses even if time logs look good.
-
-Logs:
-${payload}
+## STYLE GUIDELINES
+- Be analytical, not generic. 
+- Use evidence from the logs (e.g., "The 3PM expense on junk food suggests a mid-afternoon energy crash").
+- Focus on the *why* behind the *what*.
 `;
   }
 
   if (type === 'weekly_report') {
-    return `You are a life systems analyst.
+    return `You are a systems thinker and life strategist.
+    
+Evaluate the user's week based on aggregated data. Look for trajectories, consistency, and structural life issues.
 
-You analyze a user’s week using:
-- Daily reports (summaries)
-- Aggregated time data
-- Habit consistency
-- Expense behavior
-
-Your goal is to evaluate balance, consistency, and lifestyle sustainability.
+## INPUT DATA
+${payload}
 
 ---
 
-## ANALYSIS REQUIREMENTS
+## OUTPUT REQUIREMENTS (STRICT FORMAT)
 
-1. Consistency:
-- Are good habits repeated or random?
-- Is routine stable or chaotic?
-
-2. Balance Across Pillars:
-- Health, Wealth, Work, Spiritual, Relationships
-
-3. Habit Signals:
-- Are key habits being maintained?
-
-4. Financial Behavior:
-- Is spending aligned with priorities?
-
-5. Cross-Insights:
-- Do habits support or contradict time usage?
-
----
-
-## OUTPUT FORMAT
-
-# Weekly Life Report
+# Weekly Life Systems Audit
 
 ## Life Score
-<0-100>
+<0-100 score reflecting weekly sustainability and progress.>
 
 ## Pillar Averages
 - Health: X/10
@@ -144,48 +78,30 @@ Your goal is to evaluate balance, consistency, and lifestyle sustainability.
 - Spiritual: X/10
 - Relationships: X/10
 
-## Summary
-<balanced weekly assessment>
+## Executive Summary
+<Overview of the week's trajectory.>
 
-## What Went Well
-- ...
+## Major Wins
+- <High-impact achievements>
 
-## What Needs Attention
-- ...
+## Friction Points
+- <What consistently failed or caused stress>
 
-## Habit Consistency
-- ...
+## Habit Sustainability
+- <Are habits sticking or breaking down?>
 
-## Financial Behavior
-- ...
+## Financial Alignment
+- <Is spending supporting long-term goals or just immediate gratificaton?>
 
-## Cross-Insights
-- ...
-
-## Suggestions for Next Week
-- ...
-- ...
-- ...
+## Strategic Recommendations
+- <3 high-level changes for next week>
 
 ---
 
 ## STYLE
-
-- Balanced
-- Insightful
-- Evidence-based
-
----
-
-## RULE
-
-Use ALL data sources together.
-
-Example:
-“Work hours were strong, but low sleep consistency and high waste spending suggest unsustainable habits.”
-
-Logs:
-${payload}
+- Macro-focused.
+- Look for consistency patterns.
+- Be strategic and direct.
 `;
   }
 
@@ -230,10 +146,10 @@ Your goal is to assess life direction, balance, and long-term sustainability.
 
 ## Pillar Scores
 - Health: X/10
-- Wealth: X/10
+- Finances: X/10
 - Work: X/10
 - Spiritual: X/10
-- Relationships: X/10
+- Social: X/10
 
 ## Summary
 <what kind of life is being built>
@@ -325,18 +241,26 @@ export async function processNextJob() {
     if (!response.ok) throw new Error('Ollama connection failed');
 
     const data = await response.json();
+    const llmResponse = data.response;
+
+    // Extract score from LLM response (Expected format: "## Life Score: 85")
+    let extractedScore = 50;
+    const scoreMatch = llmResponse.match(/Life Score[:\s]*(\d+)/i);
+    if (scoreMatch) {
+      extractedScore = parseInt(scoreMatch[1], 10);
+    }
     
     await supabase.from('reports').insert([{
       type: job.type,
       start_date: job.meta?.start_date,
       end_date: job.meta?.end_date,
-      content: data.response,
-      score: 50,
+      content: llmResponse,
+      score: extractedScore,
       created_at: Date.now()
     }]);
 
     await supabase.from('llm_jobs').update({ status: 'completed' }).eq('id', job.id);
-    logToTerminal(`Successfully generated ${job.type} report.`);
+    logToTerminal(`Successfully generated ${job.type} report with score: ${extractedScore}.`);
 
   } catch (error) {
     logToTerminal(`Error processing ${job.type}: ${error.message}`);
