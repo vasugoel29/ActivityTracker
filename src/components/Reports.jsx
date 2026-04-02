@@ -30,7 +30,7 @@ const PILLAR_COLORS = {
   Social: 'from-rose-500 to-red-600'
 };
 
-function WeeklyHabitGrid({ startDate, endDate }) {
+function HabitContinuityGrid({ startDate, endDate, type }) {
   const habits = useHabits() || [];
   const logs = useHabitLogs() || [];
   
@@ -48,52 +48,74 @@ function WeeklyHabitGrid({ startDate, endDate }) {
     <div className="glass-panel p-8 rounded-[32px] overflow-hidden relative group">
       <div className="absolute inset-0 bg-gradient-to-br from-[#818cf8]/5 to-transparent opacity-30 group-hover:opacity-60 transition-opacity"></div>
       <div className="relative z-10 space-y-6">
-        <div className="grid grid-cols-[1fr,auto] items-center gap-4">
-           <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em]">Weekly Continuity</h3>
-           <div className="flex gap-1 pr-1">
-             {days.map(d => (
-               <span key={d.toISOString()} className="w-8 text-center text-[9px] font-black text-gray-600 uppercase">
-                 {format(d, 'eeeee')}
-               </span>
-             ))}
-           </div>
+        <div className="flex items-center justify-between gap-4">
+           <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em]">
+             {type === 'monthly_report' ? 'Monthly Continuity Audit' : 'Weekly Continuity Audit'}
+           </h3>
+           {days.length > 7 && (
+             <span className="text-[9px] font-bold text-[#818cf8]/60 uppercase tracking-widest animate-pulse">Scroll to View →</span>
+           )}
         </div>
 
-        <div className="space-y-3">
-          {habits.map(habit => (
-            <div key={habit.id} className="grid grid-cols-[1fr,auto] items-center gap-4 group/row">
-              <span className="text-sm font-bold text-gray-400 group-hover/row:text-white transition-colors truncate pr-2">
-                {habit.name}
-              </span>
-              <div className="flex gap-1 shrink-0">
-                {days.map(day => {
-                  const dayLog = logs?.find(l => l.habit_id === habit.id && isSameDay(new Date(l.date_string), day));
-                  const isDone = !!dayLog;
-                  const isPartial = dayLog && habit.target_value && (dayLog.value < habit.target_value);
-
-                  return (
-                    <motion.div
-                      key={day.toISOString()}
-                      initial={false}
-                      animate={{ 
-                        backgroundColor: isDone ? '#818cf8' : 'rgba(255,255,255,0.03)',
-                        opacity: isPartial ? 0.45 : 1,
-                        boxShadow: (isDone && !isPartial) ? '0 0 12px rgba(129,140,248,0.5)' : 'none'
-                      }}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center transition-all border border-white/5"
-                    >
-                      {isDone && (
-                        <CheckCircle2 
-                          size={14} 
-                          className={isPartial ? 'text-white/60' : 'text-white'} 
-                        />
-                      )}
-                    </motion.div>
-                  );
-                })}
+        <div className="overflow-x-auto pb-2 -mx-2 px-2 scrollbar-premium">
+          <div className="min-w-max space-y-4">
+            {/* Header Row: Days */}
+            <div className="flex items-center gap-6">
+              <div className="w-32 shrink-0 sticky left-0 z-20 bg-[#12121A]/80 backdrop-blur-md rounded-lg"></div>
+              <div className="flex gap-1.5 px-2">
+                {days.map(d => (
+                  <div key={d.toISOString()} className="w-9 flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-gray-600 uppercase">
+                      {format(d, 'eeeee')}
+                    </span>
+                    <span className="text-[8px] font-bold text-gray-700">
+                      {format(d, 'd')}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+
+            {/* Habit Rows */}
+            <div className="space-y-3">
+              {habits.map(habit => (
+                <div key={habit.id} className="flex items-center gap-6 group/row">
+                  <div className="w-32 shrink-0 sticky left-0 z-20 bg-[#12121A]/90 backdrop-blur-md px-3 py-2 rounded-xl border border-white/5 shadow-xl">
+                    <span className="text-sm font-bold text-gray-400 group-hover/row:text-white transition-colors truncate block">
+                      {habit.name}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0 px-2">
+                    {days.map(day => {
+                      const dayLog = logs?.find(l => l.habit_id === habit.id && isSameDay(new Date(l.date_string), day));
+                      const isDone = !!dayLog;
+                      const isPartial = dayLog && habit.target_value && (dayLog.value < habit.target_value);
+
+                      return (
+                        <motion.div
+                          key={day.toISOString()}
+                          initial={false}
+                          animate={{ 
+                            backgroundColor: isDone ? '#818cf8' : 'rgba(255,255,255,0.03)',
+                            opacity: isPartial ? 0.45 : 1,
+                            boxShadow: (isDone && !isPartial) ? '0 0 12px rgba(129,140,248,0.5)' : 'none'
+                          }}
+                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all border border-white/5"
+                        >
+                          {isDone && (
+                            <CheckCircle2 
+                              size={16} 
+                              className={isPartial ? 'text-white/60' : 'text-white'} 
+                            />
+                          )}
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -105,6 +127,7 @@ export function Reports() {
   const [activeTab, setActiveTab] = useState('daily_report');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
+  const [selectedPillar, setSelectedPillar] = useState(null);
 
   const safeIsSameDay = (d1, d2) => {
     if (!d1 || !d2) return false;
@@ -192,11 +215,41 @@ export function Reports() {
       line = line.trim();
       if (!line) continue;
 
-      // Extract Pillars (Handling Note capture with | or :)
+      // Structured Pillar Analysis Parsing
+      if (line.match(/^###\s*(Health|Wealth|Finances|Work|Spiritual|Relationships|Social)/i)) {
+          const nameMatch = line.match(/^###\s*(Health|Wealth|Finances|Work|Spiritual|Relationships|Social)/i);
+          let name = nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1).toLowerCase();
+          if (name === 'Wealth') name = 'Finances';
+          if (name === 'Relationships') name = 'Social';
+          
+          const currentPillar = {
+             name,
+             score: 0,
+             note: '',
+             calculation: '',
+             metrics: '',
+             process: ''
+          };
+
+          // Look ahead to find details for this pillar
+          let j = lines.indexOf(line) + 1;
+          while (j < lines.length && !lines[j].startsWith('###') && !lines[j].startsWith('##')) {
+             const subLine = lines[j].trim();
+             if (subLine.match(/^Score:\s*(\d+)/i)) currentPillar.score = parseInt(subLine.match(/(\d+)/)[1]);
+             if (subLine.match(/^Summary:\s*(.*)/i)) currentPillar.note = subLine.replace(/^Summary:\s*/i, '').trim();
+             if (subLine.match(/^Calculation:\s*(.*)/i)) currentPillar.calculation = subLine.replace(/^Calculation:\s*/i, '').trim();
+             if (subLine.match(/^Metrics:\s*(.*)/i)) currentPillar.metrics = subLine.replace(/^Metrics:\s*/i, '').trim();
+             if (subLine.match(/^Process:\s*(.*)/i)) currentPillar.process = subLine.replace(/^Process:\s*/i, '').trim();
+             j++;
+          }
+          pillars.push(currentPillar);
+          continue;
+      }
+
+      // Legacy fallback parsing for older reports
       const pillarMatch = line.match(/^[-*]\s*(Health|Wealth|Finances|Work|Spiritual|Relationships|Social):\s*(\d+)[^0-9]?\/10\s*[|:-]\s*(.*)$/i);
       if (pillarMatch) {
          let name = pillarMatch[1].charAt(0).toUpperCase() + pillarMatch[1].slice(1).toLowerCase();
-         // Standardize to current UI naming
          if (name === 'Wealth') name = 'Finances';
          if (name === 'Relationships') name = 'Social';
 
@@ -440,9 +493,10 @@ export function Reports() {
                animate={{ opacity: 1, scale: 1 }}
                transition={{ delay: 0.3 }}
             >
-               <WeeklyHabitGrid 
+               <HabitContinuityGrid 
                   startDate={activeTab === 'weekly_report' ? startOfWeek(currentDate, { weekStartsOn: 1 }) : startOfMonth(currentDate)}
                   endDate={activeTab === 'weekly_report' ? endOfWeek(currentDate, { weekStartsOn: 1 }) : endOfMonth(currentDate)}
+                  type={activeTab}
                />
             </motion.div>
           )}
@@ -458,8 +512,12 @@ export function Reports() {
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.05 }}
-                  className="glass-panel p-8 rounded-[32px] group hover:border-[#818cf8]/30 transition-all cursor-default"
+                  onClick={() => setSelectedPillar(p)}
+                  className="glass-panel p-8 rounded-[32px] group hover:border-[#818cf8]/50 transition-all cursor-pointer relative overflow-hidden"
                 >
+                  <div className="absolute top-2 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[10px] font-black text-[#818cf8] uppercase tracking-widest bg-[#818cf8]/10 px-2.5 py-1 rounded-full border border-[#818cf8]/20">Detailed Analysis</span>
+                  </div>
                   <div className="space-y-6">
                     {/* Header Row: Icon, Title, and Score */}
                     <div className="flex items-center justify-between">
@@ -627,6 +685,108 @@ export function Reports() {
           </motion.div>
         )
       )}
+
+      {/* Pillar Detail Modal */}
+      <AnimatePresence>
+        {selectedPillar && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[1000] flex items-center justify-center px-4 py-8 pointer-events-none"
+          >
+            <div className="absolute inset-0 bg-[#0A0A0F]/90 backdrop-blur-xl pointer-events-auto" onClick={() => setSelectedPillar(null)} />
+            
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="glass-panel w-full max-w-2xl max-h-full overflow-y-auto rounded-[40px] border-[#818cf8]/30 relative z-10 pointer-events-auto"
+            >
+              <div className="p-10 space-y-10">
+                {/* Modal Header */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-6">
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${PILLAR_COLORS[selectedPillar.name]} flex items-center justify-center text-white shadow-xl`}>
+                      {PILLAR_ICONS[selectedPillar.name]}
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-black text-white tracking-tighter uppercase">{selectedPillar.name} Audit</h2>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex gap-0.5">
+                          {[...Array(10)].map((_, i) => (
+                            <div 
+                              key={i} 
+                              className={`w-3 h-1 rounded-full ${i < selectedPillar.score ? PILLAR_COLORS[selectedPillar.name].split(' ')[1] : 'bg-white/5'}`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs font-black text-gray-500 uppercase tracking-widest">{selectedPillar.score} / 10 Integrity</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedPillar(null)}
+                    className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-gray-400 hover:text-white transition-all shadow-inner"
+                  >
+                    <ChevronLeft size={24} className="rotate-90" />
+                  </button>
+                </div>
+
+                <div className="space-y-8">
+                  {/* Summary Section */}
+                  <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 space-y-3">
+                    <p className="text-[10px] font-black text-[#818cf8] uppercase tracking-[0.25em]">Strategic Summary</p>
+                    <p className="text-xl font-bold text-gray-100 leading-relaxed italic">
+                      "{selectedPillar.note || 'No high-level summary available.'}"
+                    </p>
+                  </div>
+
+                  {/* Detailed Analysis Sections */}
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Target size={14} className="text-blue-400" />
+                        <p className="text-[11px] font-black text-blue-400 uppercase tracking-widest">Calculation Logic</p>
+                      </div>
+                      <p className="text-[17px] font-medium text-gray-300 leading-relaxed pl-6 border-l-2 border-blue-400/20">
+                        {selectedPillar.calculation || 'Analyzing algorithmic attribution... New reports will include detailed logic.'}
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Zap size={14} className="text-amber-400" />
+                        <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest">Specific Metrics</p>
+                      </div>
+                      <p className="text-[17px] font-medium text-gray-300 leading-relaxed pl-6 border-l-2 border-amber-400/20">
+                        {selectedPillar.metrics || 'Identifying data correlation points... New reports will include extracted metrics.'}
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={14} className="text-purple-400" />
+                        <p className="text-[11px] font-black text-purple-400 uppercase tracking-widest">Decision Process</p>
+                      </div>
+                      <p className="text-[17px] font-medium text-gray-300 leading-relaxed pl-6 border-l-2 border-purple-400/20">
+                        {selectedPillar.process || 'Tracing systemic reasoning... New reports will include process documentation.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setSelectedPillar(null)}
+                  className="w-full py-5 bg-white/5 hover:bg-white/10 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] transition-all border border-white/5"
+                >
+                  Return to Audit
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

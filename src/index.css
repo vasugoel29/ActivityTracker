@@ -55,3 +55,22 @@ body {
 .animate-pulse-slow {
   animation: pulse-glow 4s ease-in-out infinite;
 }
+
+/* Premium Scrollbar */
+.scrollbar-premium::-webkit-scrollbar {
+  height: 4px;
+}
+
+.scrollbar-premium::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+}
+
+.scrollbar-premium::-webkit-scrollbar-thumb {
+  background: rgba(129, 140, 248, 0.2);
+  border-radius: 10px;
+}
+
+.scrollbar-premium::-webkit-scrollbar-thumb:hover {
+  background: rgba(129, 140, 248, 0.5);
+}

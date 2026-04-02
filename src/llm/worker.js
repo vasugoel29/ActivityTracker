@@ -37,11 +37,16 @@ ${type !== 'daily_report' ? `## Weekly Rhythm
 - Critical Friction: [Specific Day + Evidence from logs]` : ''}
 
 ## Pillar Audits
-- Health: [Score]/10 | [Analytical Note]
-- Finances: [Score]/10 | [Analytical Note]
-- Work: [Score]/10 | [Analytical Note]
-- Spiritual: [Score]/10 | [Analytical Note]
-- Social: [Score]/10 | [Analytical Note]
+
+For each pillar below, provide a structured analysis:
+### [Pillar Name]
+Score: [Score]/10
+Summary: [One-sentence overview]
+Calculation: [Specific logic for the score]
+Metrics: [Specific data points/logs analyzed]
+Process: [The strategic reasoning/decision process]
+
+PILLARS: Health, Finances, Work, Spiritual, Social
 
 ## Executive Summary
 <One sentence high-level overview of the ${periodLabel}'s trajectory>
