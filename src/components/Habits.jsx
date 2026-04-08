@@ -4,6 +4,7 @@ import { useHabits, useHabitLogs, addHabit, deleteHabit, updateHabit, toggleDail
 import { Plus, Check, ChevronLeft, ChevronRight, X, Target, Trash2, Minus, Pencil } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays, isSameDay, parseISO, isToday as isTodayFn } from 'date-fns';
 import { useToast } from './Toaster';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function Habits() {
   const habits = useHabits() || [];
@@ -95,66 +96,72 @@ export function Habits() {
                const dateStr = format(currentDate, 'yyyy-MM-dd');
                
                return (
-                 <div key={habit.id} className="bg-[#12121A] border border-gray-800 p-4 rounded-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 left-0 h-1 bg-[#0B0B0F] w-full">
-                       <div className="h-full bg-[#818cf8] transition-all duration-500 ease-out" style={{ width: `${percentage}%` }} />
-                    </div>
-                    
-                    <div className="flex justify-between items-center gap-4 mt-1">
-                       <div className="flex-1 min-w-0 pr-2">
-                          <h3 className={`font-bold text-lg transition-colors truncate ${isCompleted ? 'text-gray-400 line-through decoration-2 decoration-gray-600' : 'text-white'}`}>{habit.name}</h3>
-                          <p className="text-gray-500 text-[11px] mt-0.5 uppercase tracking-widest font-bold truncate">
-                             {habit.frequency_type.replace('_', ' ')} • Goal: {target}
-                          </p>
-                       </div>
-                       
-                       <div className="flex items-center gap-3">
-                          <span className="text-sm font-black text-gray-500 tracking-tighter w-8 text-right shrink-0">{count}/{target}</span>
-                          
-                          {target === 1 ? (
-                             <button 
-                                onClick={() => toggleDailyHabit(habit.id, dateStr)} 
-                                className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${isCompleted ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)] border border-emerald-400' : 'bg-[#0B0B0F] border border-gray-700 text-gray-500 hover:border-gray-500'}`}
-                             >
-                                <Check size={20} strokeWidth={isCompleted ? 4 : 2} />
-                             </button>
-                          ) : (
-                             <div className="flex items-center gap-1.5 p-1 bg-[#0B0B0F] border border-gray-800 rounded-xl">
-                                <button 
-                                   onClick={() => removeLastHabitLog(habit.id, dateStr)}
-                                   disabled={count === 0}
-                                   className="h-8 w-8 rounded-lg bg-gray-900 text-gray-400 flex items-center justify-center hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition"
-                                >
-                                   <Minus size={16} strokeWidth={3} />
-                                </button>
-                                <button 
-                                   onClick={() => logHabitInstance(habit.id, dateStr)}
-                                   className={`h-8 w-8 rounded-lg flex items-center justify-center transition ${isCompleted ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#818cf8]/20 text-[#818cf8]'}`}
-                                >
-                                   <Plus size={16} strokeWidth={3} />
-                                </button>
-                             </div>
-                          )}
-                       </div>
+                 <div key={habit.id} className="relative overflow-hidden rounded-2xl">
+                    {/* Delete Action Background */}
+                    <div className="absolute inset-0 bg-red-500/20 flex items-center justify-end px-6 rounded-2xl mb-px">
+                       <Trash2 size={24} className="text-red-500" />
                     </div>
 
-                    <div className="flex items-center gap-1.5 mt-4 p-1 bg-[#0B0B0F] border border-gray-800 rounded-xl w-fit ml-auto">
-                        <button 
-                           onClick={() => setHabitModalData({ mode: 'edit', habit: habit })}
-                           className="p-2.5 text-gray-500 hover:text-[#818cf8] transition-all rounded-lg hover:bg-[#818cf8]/10"
-                           title="Edit Habit"
-                        >
-                           <Pencil size={18} />
-                        </button>
-                        <div className="w-[1px] h-4 bg-gray-800" />
-                        <button 
-                           onClick={() => setDeleteConfirmId(habit.id)}
-                           className="p-2.5 text-gray-500 hover:text-red-400 transition-all rounded-lg hover:bg-red-500/10"
-                           title="Delete Habit"
-                        >
-                           <Trash2 size={18} />
-                        </button>
-                    </div>
+                    <motion.div 
+                       drag="x"
+                       dragConstraints={{ right: 0, left: -100 }}
+                       dragElastic={0.1}
+                       onDragEnd={(_, info) => {
+                          if (info.offset.x < -80) setDeleteConfirmId(habit.id);
+                       }}
+                       className="bg-[#12121A] border border-gray-800 p-4 rounded-2xl relative z-10 overflow-hidden group touch-pan-y"
+                    >
+                        <div className="absolute top-0 left-0 h-1 bg-[#0B0B0F] w-full">
+                           <div className="h-full bg-[#818cf8] transition-all duration-500 ease-out" style={{ width: `${percentage}%` }} />
+                        </div>
+                        
+                        <div className="flex justify-between items-center gap-4 mt-1">
+                           <div className="flex-1 min-w-0 pr-2">
+                              <h3 className={`font-bold text-lg transition-colors truncate ${isCompleted ? 'text-gray-400 line-through decoration-2 decoration-gray-600' : 'text-white'}`}>{habit.name}</h3>
+                              <p className="text-gray-500 text-[11px] mt-0.5 uppercase tracking-widest font-bold truncate">
+                                 {habit.frequency_type.replace('_', ' ')} • Goal: {target}
+                              </p>
+                           </div>
+                           
+                           <div className="flex items-center gap-3">
+                              <span className="text-sm font-black text-gray-500 tracking-tighter w-8 text-right shrink-0">{count}/{target}</span>
+                              
+                              <div className="flex items-center gap-1.5 p-1 bg-[#0B0B0F] border border-gray-800 rounded-xl">
+                                 <button 
+                                    onClick={() => setHabitModalData({ mode: 'edit', habit: habit })}
+                                    className="h-8 w-8 rounded-lg bg-gray-900 text-gray-400 flex items-center justify-center hover:bg-gray-800 hover:text-[#818cf8] transition"
+                                 >
+                                    <Pencil size={15} />
+                                 </button>
+                                 <div className="w-[1px] h-4 bg-gray-800" />
+                                 {target === 1 ? (
+                                    <button 
+                                       onClick={() => toggleDailyHabit(habit.id, dateStr)} 
+                                       className={`h-9 w-9 rounded-lg flex items-center justify-center transition-all ${isCompleted ? 'bg-emerald-500 text-white' : 'text-gray-500 hover:text-white'}`}
+                                    >
+                                       <Check size={18} strokeWidth={isCompleted ? 4 : 2} />
+                                    </button>
+                                 ) : (
+                                    <>
+                                       <button 
+                                          onClick={() => removeLastHabitLog(habit.id, dateStr)}
+                                          disabled={count === 0}
+                                          className="h-8 w-8 rounded-lg bg-gray-900 text-gray-400 flex items-center justify-center hover:bg-gray-800 disabled:opacity-30 transition"
+                                       >
+                                          <Minus size={16} strokeWidth={3} />
+                                       </button>
+                                       <button 
+                                          onClick={() => logHabitInstance(habit.id, dateStr)}
+                                          className={`h-8 w-8 rounded-lg flex items-center justify-center transition ${isCompleted ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#818cf8]/20 text-[#818cf8]'}`}
+                                       >
+                                          <Plus size={16} strokeWidth={3} />
+                                       </button>
+                                    </>
+                                 )}
+                              </div>
+                           </div>
+                        </div>
+                    </motion.div>
                  </div>
                );
             })

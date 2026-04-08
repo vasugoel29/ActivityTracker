@@ -3,6 +3,7 @@ import { useExpensesByDate, addExpense, deleteExpense, updateExpense } from '../
 import { Plus, ChevronLeft, ChevronRight, X, Trash2, Wallet, TrendingDown, CreditCard, Pencil } from 'lucide-react';
 import { format, subDays, addDays, isSameDay, isToday as isTodayFn } from 'date-fns';
 import { useToast } from './Toaster';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function Expenses() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -79,42 +80,47 @@ export function Expenses() {
             </div>
          ) : (
             expenses.map(exp => (
-               <div key={exp.id} className="bg-[#12121A] border border-gray-800 p-4 rounded-2xl flex justify-between items-center group transition-colors hover:border-gray-700">
-                  <div className="flex items-center gap-4 flex-1 min-w-0 mr-4">
-                     <div className="h-12 w-12 rounded-2xl bg-[#0B0B0F] border border-gray-800 flex items-center justify-center shrink-0">
-                        <CreditCard size={20} className="text-emerald-500/70" />
-                     </div>
-                     <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-white text-[15px] truncate">{exp.category}</h3>
-                        {exp.description && (
-                           <p className="text-gray-500 text-xs mt-0.5 truncate max-w-[150px]">{exp.description}</p>
-                        )}
-                        <p className="text-xs text-gray-600 font-mono mt-1">{new Date(exp.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                     </div>
+               <div key={exp.id} className="relative overflow-hidden rounded-2xl">
+                  {/* Delete Action Background */}
+                  <div className="absolute inset-0 bg-red-500/20 flex items-center justify-end px-6">
+                     <Trash2 size={24} className="text-red-500" />
                   </div>
-                  
-                  <div className="flex flex-col items-end gap-3">
-                     <span className="font-black text-white text-lg tabular-nums tracking-tight">
-                        ₹{parseFloat(exp.amount).toFixed(2)}
-                     </span>
-                     <div className="flex items-center gap-1 p-1 bg-[#0B0B0F] border border-gray-800 rounded-xl">
+
+                  <motion.div 
+                     drag="x"
+                     dragConstraints={{ right: 0, left: -100 }}
+                     dragElastic={0.1}
+                     onDragEnd={(_, info) => {
+                        if (info.offset.x < -80) setDeleteConfirmId(exp.id);
+                     }}
+                     className="bg-[#12121A] border border-gray-800 p-4 rounded-2xl flex justify-between items-center relative z-10 transition-colors hover:border-gray-700 touch-pan-y"
+                  >
+                     <div className="flex items-center gap-4 flex-1 min-w-0 mr-4">
+                        <div className="h-12 w-12 rounded-2xl bg-[#0B0B0F] border border-gray-800 flex items-center justify-center shrink-0">
+                           <CreditCard size={20} className="text-emerald-500/70" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                           <h3 className="font-bold text-white text-[15px] truncate">{exp.category}</h3>
+                           {exp.description && (
+                              <p className="text-gray-500 text-xs mt-0.5 truncate max-w-[150px]">{exp.description}</p>
+                           )}
+                           <p className="text-xs text-gray-600 font-mono mt-1">{new Date(exp.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                        </div>
+                     </div>
+                     
+                     <div className="flex items-center gap-3">
+                        <span className="font-black text-white text-lg tabular-nums tracking-tight">
+                           ₹{parseFloat(exp.amount).toFixed(2)}
+                        </span>
                         <button 
                            onClick={() => setExpenseModalData({ mode: 'edit', expense: exp })}
-                           className="p-2.5 text-gray-500 hover:text-emerald-400 transition-all rounded-lg hover:bg-emerald-500/10"
+                           className="h-10 w-10 bg-[#0B0B0F] border border-gray-800 rounded-xl flex items-center justify-center text-gray-500 hover:text-emerald-400 hover:border-emerald-500/30 transition-all"
                            title="Edit"
                         >
                            <Pencil size={18} />
                         </button>
-                        <div className="w-[1px] h-4 bg-gray-800" />
-                        <button 
-                           onClick={() => setDeleteConfirmId(exp.id)}
-                           className="p-2.5 text-gray-500 hover:text-red-400 transition-all rounded-lg hover:bg-red-500/10"
-                           title="Delete"
-                        >
-                           <Trash2 size={18} />
-                        </button>
                      </div>
-                  </div>
+                  </motion.div>
                </div>
             ))
          )}
