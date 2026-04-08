@@ -17,6 +17,7 @@ export default defineConfig({
       devOptions: {
         enabled: true
       },
+      manifestFilename: 'manifest.json',
       manifest: {
         name: 'Personal Habit Tracker',
         short_name: 'Tracker',
