@@ -8,7 +8,7 @@ import {
   Heart, Wallet, Briefcase, Sparkles, Users,
   CheckCircle2, Circle
 } from 'lucide-react';
-import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths, formatISO, eachDayOfInterval } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, isSameDay, isSameWeek, isSameMonth, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths, formatISO, eachDayOfInterval } from 'date-fns';
 import { useToast } from './Toaster';
 import { useHabitLogs, useHabits } from '../hooks/useHabits';
 // eslint-disable-next-line no-unused-vars
@@ -130,19 +130,23 @@ export function Reports() {
   const [loading, setLoading] = useState(false);
   const [selectedPillar, setSelectedPillar] = useState(null);
 
-  const safeIsSameDay = (d1, d2) => {
+  const safeIsSamePeriod = (d1, d2, type) => {
     if (!d1 || !d2) return false;
     const date1 = new Date(d1);
     const date2 = new Date(d2);
     if (isNaN(date1.getTime()) || isNaN(date2.getTime())) return false;
+    
+    if (type === 'daily_report') return isSameDay(date1, date2);
+    if (type === 'weekly_report') return isSameWeek(date1, date2, { weekStartsOn: 1 });
+    if (type === 'monthly_report') return isSameMonth(date1, date2);
     return isSameDay(date1, date2);
   };
   
   const allReports = useReportsByType(activeTab) || [];
   const allJobs = useJobsByType(activeTab) || [];
   
-  const latestReport = allReports.find(r => safeIsSameDay(r.start_date || r.created_at, currentDate));
-  const activeJobs = allJobs.filter(j => j.status !== 'completed' && safeIsSameDay(j.meta?.start_date || j.created_at, currentDate));
+  const latestReport = allReports.find(r => safeIsSamePeriod(r.start_date || r.created_at, currentDate, activeTab));
+  const activeJobs = allJobs.filter(j => j.status !== 'completed' && safeIsSamePeriod(j.meta?.start_date || j.created_at, currentDate, activeTab));
 
   const tabs = [
     { id: 'daily_report', label: 'Daily', icon: <Target size={14} /> },
