@@ -15,6 +15,7 @@ import { GlobalJobQueue } from './components/GlobalJobQueue';
 function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [currentTab, setCurrentTab] = useState('home');
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
@@ -26,8 +27,11 @@ function App() {
     });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryMode(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -43,10 +47,10 @@ function App() {
     );
   }
 
-  if (!session) {
+  if (!session || isRecoveryMode) {
     return (
       <ToastProvider>
-        <Auth />
+        <Auth recoveryMode={isRecoveryMode} onPasswordUpdated={() => setIsRecoveryMode(false)} />
       </ToastProvider>
     );
   }

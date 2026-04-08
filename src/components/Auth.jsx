@@ -2,33 +2,65 @@ import React, { useState } from 'react';
 import { supabase } from '../db/supabase';
 import { Mail, Lock, User, ArrowRight, Loader2, BarChart3, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import { useToast } from './Toaster';
 
-export function Auth() {
+export function Auth({ recoveryMode, onPasswordUpdated }) {
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState(recoveryMode ? 'update' : 'signin'); // modes: signin, signup, forgot, update
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Handle recoveryMode prop change
+  useEffect(() => {
+    if (recoveryMode) setMode('update');
+  }, [recoveryMode]);
 
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        toast.success('Check your email for the confirmation link!');
-      } else {
+        toast.success('Account created successfully!');
+      } else if (mode === 'signin') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success('Welcome back!');
+      } else if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin
+        });
+        if (error) throw error;
+        toast.success('Password reset link sent to your email');
+        setMode('signin');
+      } else if (mode === 'update') {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        toast.success('Password updated successfully!');
+        if (onPasswordUpdated) onPasswordUpdated();
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
+  };
+
+  const titles = {
+    signin: 'Welcome Back',
+    signup: 'Create Account',
+    forgot: 'Reset Password',
+    update: 'Set New Password'
+  };
+
+  const descriptions = {
+    signin: 'Secure access to your performance metrics',
+    signup: 'Join the community of performance trackers',
+    forgot: 'Enter your email to receive a recovery link',
+    update: 'Secure your account with a new password'
   };
 
   return (
@@ -48,47 +80,64 @@ export function Auth() {
               <BarChart3 className="text-white" size={28} />
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">
-              Activity Tracker
+              {titles[mode]}
             </h1>
             <p className="text-gray-400 text-center">
-              {isSignUp ? 'Join the community of performance trackers' : 'Secure access to your performance metrics'}
+              {descriptions[mode]}
             </p>
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest ml-1">Email address</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500 group-focus-within:text-indigo-400 transition-colors">
-                  <Mail size={18} />
+            {mode !== 'update' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest ml-1">Email address</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500 group-focus-within:text-indigo-400 transition-colors">
+                    <Mail size={18} />
+                  </div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-[#181823] border border-gray-800 rounded-xl py-3 pl-10 pr-4 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-gray-600"
+                    placeholder="name@example.com"
+                    required
+                  />
                 </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-[#181823] border border-gray-800 rounded-xl py-3 pl-10 pr-4 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-gray-600"
-                  placeholder="name@example.com"
-                  required
-                />
               </div>
-            </div>
+            )}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest ml-1">Password</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500 group-focus-within:text-indigo-400 transition-colors">
-                  <Lock size={18} />
+            {mode !== 'forgot' && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                    {mode === 'update' ? 'New Password' : 'Password'}
+                  </label>
+                  {mode === 'signin' && (
+                    <button 
+                      type="button" 
+                      onClick={() => setMode('forgot')}
+                      className="text-[10px] text-gray-600 hover:text-indigo-400 transition-colors uppercase font-bold tracking-tighter"
+                    >
+                      Forgot?
+                    </button>
+                  )}
                 </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#181823] border border-gray-800 rounded-xl py-3 pl-10 pr-4 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-gray-600"
-                  placeholder="••••••••"
-                  required
-                />
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500 group-focus-within:text-indigo-400 transition-colors">
+                    <Lock size={18} />
+                  </div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-[#181823] border border-gray-800 rounded-xl py-3 pl-10 pr-4 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-gray-600"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <button
               type="submit"
@@ -99,7 +148,11 @@ export function Auth() {
                 <Loader2 className="animate-spin" size={20} />
               ) : (
                 <>
-                  <span>{isSignUp ? 'Create account' : 'Sign in'}</span>
+                  <span>
+                    {mode === 'signin' ? 'Sign in' : 
+                     mode === 'signup' ? 'Create account' : 
+                     mode === 'forgot' ? 'Send Link' : 'Update Password'}
+                  </span>
                   <ArrowRight size={18} />
                 </>
               )}
@@ -107,12 +160,21 @@ export function Auth() {
           </form>
 
           <div className="mt-8 flex flex-col items-center gap-4">
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </button>
+            {mode === 'forgot' ? (
+              <button
+                onClick={() => setMode('signin')}
+                className="text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Back to Sign in
+              </button>
+            ) : mode !== 'update' ? (
+              <button
+                onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+                className="text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                {mode === 'signin' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+              </button>
+            ) : null}
             
             <div className="flex items-center gap-2 text-[10px] text-gray-600 uppercase tracking-widest">
               <Fingerprint size={12} />
