@@ -93,24 +93,25 @@ export function Expenses() {
                      </div>
                   </div>
                   
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex flex-col items-end gap-3">
                      <span className="font-black text-white text-lg tabular-nums tracking-tight">
                         ₹{parseFloat(exp.amount).toFixed(2)}
                      </span>
-                     <div className="flex items-center gap-2">
+                     <div className="flex items-center gap-1 p-1 bg-[#0B0B0F] border border-gray-800 rounded-xl">
                         <button 
                            onClick={() => setExpenseModalData({ mode: 'edit', expense: exp })}
-                           className="text-gray-600 hover:text-emerald-400 opacity-40 hover:opacity-100 transition-all"
+                           className="p-2.5 text-gray-500 hover:text-emerald-400 transition-all rounded-lg hover:bg-emerald-500/10"
                            title="Edit"
                         >
-                           <Pencil size={14} />
+                           <Pencil size={18} />
                         </button>
+                        <div className="w-[1px] h-4 bg-gray-800" />
                         <button 
                            onClick={() => setDeleteConfirmId(exp.id)}
-                           className="text-gray-600 hover:text-red-400 opacity-40 hover:opacity-100 transition-all"
+                           className="p-2.5 text-gray-500 hover:text-red-400 transition-all rounded-lg hover:bg-red-500/10"
                            title="Delete"
                         >
-                           <Trash2 size={14} />
+                           <Trash2 size={18} />
                         </button>
                      </div>
                   </div>

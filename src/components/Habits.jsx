@@ -138,20 +138,21 @@ export function Habits() {
                        </div>
                     </div>
 
-                    <div className="absolute top-2 right-2 flex items-center gap-1.5 translate-x-1">
+                    <div className="flex items-center gap-1.5 mt-4 p-1 bg-[#0B0B0F] border border-gray-800 rounded-xl w-fit ml-auto">
                         <button 
                            onClick={() => setHabitModalData({ mode: 'edit', habit: habit })}
-                           className="p-1.5 text-gray-700 hover:text-[#818cf8] opacity-40 hover:opacity-100 transition-all rounded-md bg-[#0B0B0F]"
-                           title="Edit"
+                           className="p-2.5 text-gray-500 hover:text-[#818cf8] transition-all rounded-lg hover:bg-[#818cf8]/10"
+                           title="Edit Habit"
                         >
-                           <Pencil size={12} />
+                           <Pencil size={18} />
                         </button>
+                        <div className="w-[1px] h-4 bg-gray-800" />
                         <button 
                            onClick={() => setDeleteConfirmId(habit.id)}
-                           className="p-1.5 text-gray-700 hover:text-red-400 opacity-40 hover:opacity-100 transition-all rounded-md bg-[#0B0B0F]"
-                           title="Delete"
+                           className="p-2.5 text-gray-500 hover:text-red-400 transition-all rounded-lg hover:bg-red-500/10"
+                           title="Delete Habit"
                         >
-                           <Trash2 size={12} />
+                           <Trash2 size={18} />
                         </button>
                     </div>
                  </div>
