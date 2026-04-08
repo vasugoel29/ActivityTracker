@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../db/supabase';
-import { Mail, Lock, User, ArrowRight, Loader2, BarChart3, Fingerprint } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Lock, ArrowRight, Loader2, BarChart3, Fingerprint } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
+import { motion } from 'framer-motion';
 import { useToast } from './Toaster';
 
 export function Auth({ recoveryMode, onPasswordUpdated }) {

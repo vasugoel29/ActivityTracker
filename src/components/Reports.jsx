@@ -11,6 +11,7 @@ import {
 import { format, subDays, startOfMonth, endOfMonth, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subMonths, addMonths, formatISO, eachDayOfInterval } from 'date-fns';
 import { useToast } from './Toaster';
 import { useHabitLogs, useHabits } from '../hooks/useHabits';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../db/supabase';
 

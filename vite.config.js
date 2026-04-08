@@ -44,4 +44,25 @@ export default defineConfig({
       }
     }
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('framer-motion') || id.includes('lucide-react')) {
+              return 'vendor-ui';
+            }
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-core';
+            }
+            if (id.includes('date-fns') || id.includes('@supabase/supabase-js')) {
+              return 'vendor-utils';
+            }
+            return 'vendor';
+          }
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
+  }
 })

@@ -14,7 +14,8 @@ export function GlobalJobQueue() {
 
    const formatJob = (job) => {
       const type = job.type;
-      const date = job.meta?.start_date ? new Date(job.meta.start_date) : new Date(job.created_at || Date.now());
+      const date = job.meta?.start_date ? new Date(job.meta.start_date) : (job.created_at ? new Date(job.created_at) : null);
+      if (!date) return 'Processing';
       if (type === 'daily_report') return `Daily (${format(date, 'MMM d')})`;
       if (type === 'weekly_report') return `Weekly (${format(date, 'MMM d')}-${format(addDays(date, 6), 'MMM d')})`;
       if (type === 'monthly_report') return `Monthly (${format(date, 'MMMM yyyy')})`;

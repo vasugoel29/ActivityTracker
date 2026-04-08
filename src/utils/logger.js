@@ -4,7 +4,7 @@
  * @param {string} message 
  */
 export async function logToTerminal(message) {
-  if (process.env.NODE_ENV === 'production') return;
+  if (import.meta.env.MODE === 'production') return;
 
   try {
     fetch('/api/log', {
@@ -14,7 +14,7 @@ export async function logToTerminal(message) {
     }).catch(() => {
       // Silently fail if dev server is unreachable or plugin not loaded
     });
-  } catch (e) {
+  } catch {
     // browser catch
   }
 }

@@ -3,7 +3,8 @@ import { useExpensesByDate, addExpense, deleteExpense, updateExpense } from '../
 import { Plus, ChevronLeft, ChevronRight, X, Trash2, Wallet, TrendingDown, CreditCard, Pencil } from 'lucide-react';
 import { format, subDays, addDays, isSameDay, isToday as isTodayFn } from 'date-fns';
 import { useToast } from './Toaster';
-import { motion, AnimatePresence } from 'framer-motion';
+// eslint-disable-next-line no-unused-vars
+import { motion } from 'framer-motion';
 
 export function Expenses() {
   const [currentDate, setCurrentDate] = useState(new Date());
