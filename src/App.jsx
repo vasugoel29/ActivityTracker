@@ -16,7 +16,9 @@ function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
-  const [currentTab, setCurrentTab] = useState('home');
+  const [currentTab, setCurrentTab] = useState(() => {
+    return localStorage.getItem('activeTab') || 'home';
+  });
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   useEffect(() => {
@@ -36,6 +38,10 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('activeTab', currentTab);
+  }, [currentTab]);
 
   useActivityNotifier();
 
