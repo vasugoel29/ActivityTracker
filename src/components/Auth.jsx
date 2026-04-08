@@ -43,7 +43,11 @@ export function Auth({ recoveryMode, onPasswordUpdated }) {
         if (onPasswordUpdated) onPasswordUpdated();
       }
     } catch (error) {
-      toast.error(error.message || 'An error occurred');
+      let msg = error.message || 'An error occurred';
+      if (msg.includes('rate limit') || error.status === 429) {
+        msg = "Rate limit reached. Please wait a few minutes before trying again.";
+      }
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

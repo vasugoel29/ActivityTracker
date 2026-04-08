@@ -22,3 +22,9 @@ export async function deleteExpense(id) {
   if (error) throw error;
   triggerOptimisticRefetch('expenses');
 }
+
+export async function updateExpense(id, updates) {
+  const { error } = await supabase.from('expenses').update(updates).eq('id', id);
+  if (error) throw error;
+  triggerOptimisticRefetch('expenses');
+}

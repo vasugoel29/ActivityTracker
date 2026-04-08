@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-import { useHabits, useHabitLogs, addHabit, deleteHabit, toggleDailyHabit, logHabitInstance, removeLastHabitLog } from '../hooks/useHabits';
-import { Plus, Check, ChevronLeft, ChevronRight, X, Target, Trash2, Minus } from 'lucide-react';
+import { useHabits, useHabitLogs, addHabit, deleteHabit, updateHabit, toggleDailyHabit, logHabitInstance, removeLastHabitLog } from '../hooks/useHabits';
+import { Plus, Check, ChevronLeft, ChevronRight, X, Target, Trash2, Minus, Pencil } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays, isSameDay, parseISO, isToday as isTodayFn } from 'date-fns';
 import { useToast } from './Toaster';
 
@@ -10,7 +10,7 @@ export function Habits() {
   const logs = useHabitLogs() || [];
   
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [habitModalData, setHabitModalData] = useState(null); // null = closed, { mode: 'add' } or { mode: 'edit', habit }
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const getProgress = (habit) => {
@@ -53,7 +53,7 @@ export function Habits() {
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold text-white tracking-tight">Habit Tracker</h1>
         <button 
-           onClick={() => setIsAddModalOpen(true)}
+           onClick={() => setHabitModalData({ mode: 'add' })}
            className="bg-[#818cf8] hover:bg-[#6366f1] text-white px-3 py-2 rounded-xl text-sm font-bold shadow-lg shadow-[#818cf8]/20 transition-colors flex items-center gap-1.5"
         >
            <Plus size={16} strokeWidth={3} />
@@ -86,7 +86,7 @@ export function Habits() {
                 </div>
                 <h3 className="text-white font-bold mb-2 text-lg">No Habits Found</h3>
                 <p className="text-gray-500 text-sm max-w-[200px] mt-1 mb-6">Build constructive routines by adding your first habit constraint.</p>
-                <button onClick={() => setIsAddModalOpen(true)} className="text-[#818cf8] font-bold text-sm bg-[#818cf8]/10 px-4 py-2 rounded-xl">Add Habit</button>
+                <button onClick={() => setHabitModalData({ mode: 'add' })} className="text-[#818cf8] font-bold text-sm bg-[#818cf8]/10 px-4 py-2 rounded-xl">Add Habit</button>
             </div>
          ) : (
             habits.map(habit => {
@@ -138,19 +138,35 @@ export function Habits() {
                        </div>
                     </div>
 
-                    <button 
-                       onClick={() => setDeleteConfirmId(habit.id)}
-                       className="absolute top-2 right-2 p-1.5 text-gray-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-md bg-[#0B0B0F]"
-                    >
-                       <Trash2 size={12} />
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 translate-x-1">
+                        <button 
+                           onClick={() => setHabitModalData({ mode: 'edit', habit: habit })}
+                           className="p-1.5 text-gray-700 hover:text-[#818cf8] opacity-40 hover:opacity-100 transition-all rounded-md bg-[#0B0B0F]"
+                           title="Edit"
+                        >
+                           <Pencil size={12} />
+                        </button>
+                        <button 
+                           onClick={() => setDeleteConfirmId(habit.id)}
+                           className="p-1.5 text-gray-700 hover:text-red-400 opacity-40 hover:opacity-100 transition-all rounded-md bg-[#0B0B0F]"
+                           title="Delete"
+                        >
+                           <Trash2 size={12} />
+                        </button>
+                    </div>
                  </div>
                );
             })
          )}
       </div>
 
-      {isAddModalOpen && <AddHabitModal onClose={() => setIsAddModalOpen(false)} />}
+      {habitModalData && (
+        <HabitModal 
+            mode={habitModalData.mode} 
+            habit={habitModalData.habit} 
+            onClose={() => setHabitModalData(null)} 
+        />
+      )}
       
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -176,30 +192,42 @@ export function Habits() {
   );
 }
 
-function AddHabitModal({ onClose }) {
-  const [name, setName] = useState('');
-  const [type, setType] = useState('daily');
-  const [target, setTarget] = useState(1);
+function HabitModal({ mode, habit, onClose }) {
+  const isEdit = mode === 'edit';
+  const [name, setName] = useState(isEdit ? habit.name : '');
+  const [type, setType] = useState(isEdit ? habit.frequency_type : 'daily');
+  const [target, setTarget] = useState(isEdit ? habit.target_count || 1 : 1);
   const toast = useToast();
 
   const handleSave = async () => {
     if (!name.trim()) return toast.error("Habit name is required");
     try {
-      await addHabit({ name: name.trim(), frequency_type: type, target_count: target });
-      toast.success("Habit constraint added!");
+      if (isEdit) {
+        await updateHabit(habit.id, {
+          name: name.trim(),
+          frequency_type: type,
+          target_count: target
+        });
+        toast.success("Routine updated!");
+      } else {
+        await addHabit({ name: name.trim(), frequency_type: type, target_count: target });
+        toast.success("Habit constraint added!");
+      }
       onClose();
     } catch (error) {
-      toast.error(error.message || "Failed to add habit");
+      toast.error(error.message || "Action failed");
     }
   };
 
-  const isMultiple = ['multiple_daily', 'weekly', 'monthly'].includes(type); // Weekly/Monthly by default imply multiple hits across days
+  const isMultiple = ['multiple_daily', 'weekly', 'monthly'].includes(type);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-[#12121A] w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] border border-gray-800 shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-2">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-white tracking-tight">Define Routine</h2>
+          <h2 className="text-xl font-bold text-white tracking-tight">
+            {isEdit ? 'Refine Routine' : 'Define Routine'}
+          </h2>
           <button onClick={onClose} className="p-2 text-gray-500 hover:text-white bg-gray-900 rounded-full transition-colors"><X size={20} /></button>
         </div>
 
@@ -212,7 +240,7 @@ function AddHabitModal({ onClose }) {
                  onChange={e => setName(e.target.value)} 
                  placeholder="e.g. Read 10 Pages" 
                  className="w-full bg-[#0B0B0F] border border-gray-800 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-[#818cf8] transition-colors"
-                 autoFocus
+                 autoFocus={!isEdit}
               />
            </div>
 
@@ -240,12 +268,12 @@ function AddHabitModal({ onClose }) {
                 <div className="flex items-center gap-3">
                    <input 
                       type="number" 
-                      min="2" 
+                      min="1" 
                       max="100"
                        value={target} 
                        onChange={e => {
                           const parsed = parseInt(e.target.value, 10);
-                          setTarget(Number.isNaN(parsed) ? 2 : Math.max(parsed, 2));
+                          setTarget(Number.isNaN(parsed) ? 1 : Math.max(parsed, 1));
                        }} 
                        className="w-24 bg-[#0B0B0F] border border-gray-800 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-[#818cf8] text-center font-bold"
                    />
@@ -260,7 +288,7 @@ function AddHabitModal({ onClose }) {
               onClick={handleSave}
               className="w-full bg-[#818cf8] hover:bg-[#6366f1] text-white py-4 rounded-xl font-bold text-sm transition-colors mt-2 shadow-lg shadow-[#818cf8]/20"
            >
-              Deploy Constraint
+              {isEdit ? 'Update Routine' : 'Deploy Constraint'}
            </button>
         </div>
       </div>

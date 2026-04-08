@@ -22,6 +22,12 @@ export async function deleteHabit(id) {
   triggerOptimisticRefetch('habit_logs');
 }
 
+export async function updateHabit(id, updates) {
+  const { error } = await supabase.from('habits').update(updates).eq('id', id);
+  if (error) throw error;
+  triggerOptimisticRefetch('habits');
+}
+
 export async function toggleDailyHabit(habitId, dateString) {
   const { data: existing, error: selectError } = await supabase.from('habit_logs').select('id').eq('habit_id', habitId).eq('date_string', dateString).maybeSingle();
   if (selectError) throw selectError;

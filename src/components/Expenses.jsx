@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { useExpensesByDate, addExpense, deleteExpense } from '../hooks/useExpenses';
-import { Plus, ChevronLeft, ChevronRight, X, Trash2, Wallet, TrendingDown, Tag, CreditCard } from 'lucide-react';
+import { useExpensesByDate, addExpense, deleteExpense, updateExpense } from '../hooks/useExpenses';
+import { Plus, ChevronLeft, ChevronRight, X, Trash2, Wallet, TrendingDown, CreditCard, Pencil } from 'lucide-react';
 import { format, subDays, addDays, isSameDay, isToday as isTodayFn } from 'date-fns';
 import { useToast } from './Toaster';
 
 export function Expenses() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [expenseModalData, setExpenseModalData] = useState(null); // null = closed, { mode: 'add' } or { mode: 'edit', expense }
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   
   const dateStr = format(currentDate, 'yyyy-MM-dd');
@@ -24,7 +24,7 @@ export function Expenses() {
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold text-white tracking-tight">Finances</h1>
         <button 
-           onClick={() => setIsAddModalOpen(true)}
+           onClick={() => setExpenseModalData({ mode: 'add' })}
            className="bg-emerald-500 hover:bg-emerald-400 text-white px-3 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-colors flex items-center gap-1.5"
         >
            <Plus size={16} strokeWidth={3} />
@@ -75,7 +75,7 @@ export function Expenses() {
                 </div>
                 <h3 className="text-white font-bold mb-2 text-lg">No Expenses Recorded</h3>
                 <p className="text-gray-500 text-sm max-w-[200px] mt-1 mb-6">Financial discipline begins with friction tracking. Log a cost.</p>
-                <button onClick={() => setIsAddModalOpen(true)} className="text-emerald-500 font-bold text-sm bg-emerald-500/10 px-4 py-2 rounded-xl">Add Transaction</button>
+                <button onClick={() => setExpenseModalData({ mode: 'add' })} className="text-emerald-500 font-bold text-sm bg-emerald-500/10 px-4 py-2 rounded-xl">Add Transaction</button>
             </div>
          ) : (
             expenses.map(exp => (
@@ -97,19 +97,36 @@ export function Expenses() {
                      <span className="font-black text-white text-lg tabular-nums tracking-tight">
                         ₹{parseFloat(exp.amount).toFixed(2)}
                      </span>
-                     <button 
-                        onClick={() => setDeleteConfirmId(exp.id)}
-                        className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                     >
-                        <Trash2 size={14} />
-                     </button>
+                     <div className="flex items-center gap-2">
+                        <button 
+                           onClick={() => setExpenseModalData({ mode: 'edit', expense: exp })}
+                           className="text-gray-600 hover:text-emerald-400 opacity-40 hover:opacity-100 transition-all"
+                           title="Edit"
+                        >
+                           <Pencil size={14} />
+                        </button>
+                        <button 
+                           onClick={() => setDeleteConfirmId(exp.id)}
+                           className="text-gray-600 hover:text-red-400 opacity-40 hover:opacity-100 transition-all"
+                           title="Delete"
+                        >
+                           <Trash2 size={14} />
+                        </button>
+                     </div>
                   </div>
                </div>
             ))
          )}
       </div>
 
-      {isAddModalOpen && <AddExpenseModal dateStr={dateStr} onClose={() => setIsAddModalOpen(false)} />}
+      {expenseModalData && (
+        <ExpenseModal 
+          mode={expenseModalData.mode} 
+          expense={expenseModalData.expense}
+          dateStr={dateStr} 
+          onClose={() => setExpenseModalData(null)} 
+        />
+      )}
       
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -135,10 +152,11 @@ export function Expenses() {
   );
 }
 
-function AddExpenseModal({ dateStr, onClose }) {
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('');
-  const [description, setDescription] = useState('');
+function ExpenseModal({ mode, expense, dateStr, onClose }) {
+  const isEdit = mode === 'edit';
+  const [amount, setAmount] = useState(isEdit ? expense.amount.toString() : '');
+  const [category, setCategory] = useState(isEdit ? expense.category : '');
+  const [description, setDescription] = useState(isEdit ? expense.description || '' : '');
   const toast = useToast();
 
   const handleSave = async () => {
@@ -146,17 +164,25 @@ function AddExpenseModal({ dateStr, onClose }) {
     if (!category.trim()) return toast.error("Category is required");
 
     try {
-      await addExpense({ 
-         amount: parseFloat(amount), 
-         category: category.trim(), 
-         description: description.trim(),
-         dateString: dateStr 
-      });
-      
-      toast.success("Transaction recorded");
+      if (isEdit) {
+        await updateExpense(expense.id, {
+          amount: parseFloat(amount),
+          category: category.trim(),
+          description: description.trim()
+        });
+        toast.success("Transaction updated");
+      } else {
+        await addExpense({ 
+           amount: parseFloat(amount), 
+           category: category.trim(), 
+           description: description.trim(),
+           dateString: dateStr 
+        });
+        toast.success("Transaction recorded");
+      }
       onClose();
     } catch (error) {
-      toast.error(error.message || "Failed to log transaction");
+      toast.error(error.message || "Action failed");
     }
   };
 
@@ -166,7 +192,9 @@ function AddExpenseModal({ dateStr, onClose }) {
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-[#12121A] w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] border border-gray-800 shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-2">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-white tracking-tight">Log Transaction</h2>
+          <h2 className="text-xl font-bold text-white tracking-tight">
+            {isEdit ? 'Update Transaction' : 'Log Transaction'}
+          </h2>
           <button onClick={onClose} className="p-2 text-gray-500 hover:text-white bg-gray-900 rounded-full transition-colors"><X size={20} /></button>
         </div>
 
@@ -183,7 +211,7 @@ function AddExpenseModal({ dateStr, onClose }) {
                     onChange={e => setAmount(e.target.value)} 
                     placeholder="0.00" 
                     className="w-full bg-[#0B0B0F] border border-gray-800 rounded-xl pl-10 pr-4 py-4 text-white font-black text-xl placeholder-gray-700 outline-none focus:border-emerald-500/50 transition-colors"
-                    autoFocus
+                    autoFocus={!isEdit}
                  />
               </div>
            </div>
@@ -218,14 +246,14 @@ function AddExpenseModal({ dateStr, onClose }) {
                  onChange={e => setDescription(e.target.value)} 
                  placeholder="Context for this cost..." 
                  className="w-full bg-[#0B0B0F] border border-gray-800 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 outline-none focus:border-emerald-500/50 transition-colors"
-             />
+              />
            </div>
 
            <button 
               onClick={handleSave}
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-white py-4 rounded-xl font-bold text-sm transition-colors mt-2 shadow-lg shadow-emerald-500/20"
            >
-              Add Expense
+              {isEdit ? 'Update Expense' : 'Add Expense'}
            </button>
         </div>
       </div>
