@@ -1,7 +1,9 @@
 import React from 'react';
-import { Home, Wallet, BookOpen, Target } from 'lucide-react';
+import { Home, Wallet, BookOpen, Target, LogOut, User } from 'lucide-react';
+import { supabase } from '../db/supabase';
+import { toast } from 'sonner';
 
-export function Layout({ children, currentTab, setCurrentTab }) {
+export function Layout({ children, currentTab, setCurrentTab, user }) {
   const tabs = [
     { id: 'home', icon: Home, label: 'Timeline' },
     { id: 'dashboard', icon: Wallet, label: 'Finances' },
@@ -9,8 +11,33 @@ export function Layout({ children, currentTab, setCurrentTab }) {
     { id: 'reports', icon: BookOpen, label: 'Reports' }
   ];
 
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) toast.error(error.message);
+    else toast.success('Signed out');
+  };
+
   return (
     <div className="min-h-screen text-white pb-20 selection:bg-indigo-500/30">
+      <header className="max-w-md mx-auto p-4 flex justify-between items-center border-b border-gray-900/50 bg-[#0A0A0F]/50 backdrop-blur-md sticky top-0 z-40">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-indigo-600/20 rounded-full flex items-center justify-center text-indigo-400">
+            <User size={16} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Authenticated</span>
+            <span className="text-xs text-gray-300 font-medium truncate max-w-[150px]">{user?.email}</span>
+          </div>
+        </div>
+        <button 
+          onClick={handleSignOut}
+          className="p-2 text-gray-500 hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/5"
+          title="Sign Out"
+        >
+          <LogOut size={18} />
+        </button>
+      </header>
+
       <main className="p-4 max-w-md mx-auto min-h-full">
         {children}
       </main>

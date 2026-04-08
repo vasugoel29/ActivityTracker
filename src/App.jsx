@@ -6,21 +6,55 @@ import { BulkLoggerModal } from './components/BulkLoggerModal';
 import { Expenses } from './components/Expenses';
 import { Reports } from './components/Reports';
 import { Habits } from './components/Habits';
-import { FileText } from 'lucide-react';
+import { Auth } from './components/Auth';
+import { FileText, Loader2 } from 'lucide-react';
 import { useActivityNotifier } from './hooks/useActivityNotifier';
 import { ToastProvider } from './components/Toaster';
 import { GlobalJobQueue } from './components/GlobalJobQueue';
 
 function App() {
-  useActivityNotifier();
-
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [currentTab, setCurrentTab] = useState('home');
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+
+  useEffect(() => {
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    // Listen for changes on auth state (sign in, sign out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useActivityNotifier();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
+        <Loader2 className="animate-spin text-indigo-500" size={32} />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <ToastProvider>
+        <Auth />
+      </ToastProvider>
+    );
+  }
 
   return (
     <ToastProvider>
       <GlobalJobQueue />
-      <Layout currentTab={currentTab} setCurrentTab={setCurrentTab}>
+      <Layout currentTab={currentTab} setCurrentTab={setCurrentTab} user={session.user}>
         <div className="animate-in fade-in duration-300">
           {currentTab === 'home' && (
             <div className="flex justify-end p-2 -mb-2">
