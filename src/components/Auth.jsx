@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../db/supabase';
 import { Mail, Lock, User, ArrowRight, Loader2, BarChart3, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
