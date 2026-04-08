@@ -5,34 +5,18 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/',
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
+      strategies: 'generateSW',
       registerType: 'autoUpdate',
       injectRegister: 'inline',
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
-      },
+      includeAssets: ['icon.png', 'manifest.json'],
+      manifest: false, // Using manual manifest in public folder
       devOptions: {
         enabled: true
-      },
-      manifestFilename: 'manifest.json',
-      manifest: {
-        name: 'Personal Habit Tracker',
-        short_name: 'Tracker',
-        description: 'Offline-first habit and activity tracker',
-        theme_color: '#0B0B0F',
-        background_color: '#0B0B0F',
-        display: 'standalone',
-        icons: [
-          {
-            src: 'icon.png',
-            sizes: '1024x1024',
-            type: 'image/png',
-            purpose: 'any maskable'
-          }
-        ]
       }
     }),
     {
