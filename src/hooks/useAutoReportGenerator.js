@@ -31,9 +31,9 @@ export function useAutoReportGenerator() {
                await supabase.from('llm_jobs').delete().in('id', failedStaleIds);
            }
 
-           const { payload, isEmpty } = await buildReportPayload(startObj.getTime(), endObj.getTime());
-           if (!isEmpty) {
-              await requestReport(payload, type, { start_date: formatISO(targetDate) });
+           const result = await buildReportPayload(startObj.getTime(), endObj.getTime());
+           if (result && result.payload && !result.isEmpty) {
+              await requestReport(result.payload, type, { start_date: formatISO(targetDate) });
            }
         }
       };
