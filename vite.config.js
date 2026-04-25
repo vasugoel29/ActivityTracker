@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: '/',
   plugins: [
     react(),
@@ -15,6 +15,9 @@ export default defineConfig({
       injectRegister: 'inline',
       includeAssets: ['icon.png', 'manifest.json'],
       manifest: false, // Using manual manifest in public folder
+      workbox: {
+        globPatterns: mode === 'development' ? [] : ['**/*.{js,css,html,ico,png,svg}'],
+      },
       devOptions: {
         enabled: true
       }
@@ -65,4 +68,4 @@ export default defineConfig({
     },
     chunkSizeWarningLimit: 1000
   }
-})
+}))

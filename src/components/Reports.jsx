@@ -294,7 +294,7 @@ export function Reports() {
     return format(d, 'MMM do, yyyy');
   };
 
-  const isToday = safeIsSameDay(currentDate, new Date());
+  const isToday = isSameDay(currentDate, new Date());
 
   return (
     <div className="max-w-4xl mx-auto px-4 pt-6 pb-20 space-y-10">

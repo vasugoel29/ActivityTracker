@@ -13,8 +13,9 @@ function FinancialAnalytics({ expenses, filterType, filterCategory, rawExpenses 
   
   // Group by category with Need/Want split
   const byCategory = expenses.reduce((acc, exp) => {
-    if (!acc[exp.category]) acc[exp.category] = { total: 0, needs: 0, wants: 0 };
+    if (!acc[exp.category]) acc[exp.category] = { total: 0, needs: 0, wants: 0, count: 0 };
     acc[exp.category].total += exp.amount;
+    acc[exp.category].count += 1;
     if (exp.necessity === 'Want') acc[exp.category].wants += exp.amount;
     else acc[exp.category].needs += exp.amount;
     return acc;
@@ -27,8 +28,9 @@ function FinancialAnalytics({ expenses, filterType, filterCategory, rawExpenses 
   // Group by Type with Need/Want split
   const byType = expenses.reduce((acc, exp) => {
     const t = exp.type || 'Personal';
-    if (!acc[t]) acc[t] = { total: 0, needs: 0, wants: 0 };
+    if (!acc[t]) acc[t] = { total: 0, needs: 0, wants: 0, count: 0 };
     acc[t].total += exp.amount;
+    acc[t].count += 1;
     if (exp.necessity === 'Want') acc[t].wants += exp.amount;
     else acc[t].needs += exp.amount;
     return acc;
@@ -85,7 +87,9 @@ function FinancialAnalytics({ expenses, filterType, filterCategory, rawExpenses 
                   {sortedCategories.slice(0, 5).map(([cat, data]) => (
                      <div key={cat} className="space-y-2">
                      <div className="flex justify-between items-baseline gap-2">
-                        <span className="text-sm font-bold text-gray-200 shrink-0">{cat}</span>
+                        <span className="text-sm font-bold text-gray-200 shrink-0">
+                           {cat} <span className="text-[10px] text-gray-500 font-medium ml-1">({data.count})</span>
+                        </span>
                         <div className="flex flex-wrap justify-end items-baseline gap-x-2 gap-y-0.5 text-right">
                            <span className="text-[10px] font-black text-white">₹{data.total.toFixed(0)}</span>
                            <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter">
@@ -120,7 +124,9 @@ function FinancialAnalytics({ expenses, filterType, filterCategory, rawExpenses 
                   {sortedTypes.map(([type, data]) => (
                      <div key={type} className="space-y-2">
                      <div className="flex justify-between items-baseline gap-2">
-                        <span className="text-sm font-bold text-gray-200 shrink-0">{type}</span>
+                        <span className="text-sm font-bold text-gray-200 shrink-0">
+                           {type} <span className="text-[10px] text-gray-500 font-medium ml-1">({data.count})</span>
+                        </span>
                         <div className="flex flex-wrap justify-end items-baseline gap-x-2 gap-y-0.5 text-right">
                            <span className="text-[10px] font-black text-white">₹{data.total.toFixed(0)}</span>
                            <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter">
