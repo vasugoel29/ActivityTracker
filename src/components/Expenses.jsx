@@ -395,8 +395,8 @@ function ExpenseModal({ mode, expense, dateStr, onClose }) {
     }
   };
 
-  const commonCategories = ["Food", "Transport", "Shopping", "Entertainment", "Utilities", "Health", "Subscriptions", "Travel", "Gifts", "Investments", "Other"];
-  const typeOptions = ["Personal", "Manya", "Papa", "Mumma", "Others"];
+  const commonCategories = ["Food", "Transport", "Shopping", "Entertainment", "Utilities", "Health", "Subscriptions", "Travel", "Gifts", "Investments", "Business Payments", "Other"];
+  const typeOptions = ["Personal", "Manya", "Papa", "Mumma", "Family", "Others"];
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
