@@ -6,14 +6,17 @@ import { useToast } from './Toaster';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
-function FinancialAnalytics({ expenses, filterType, setFilterType, rawExpenses }) {
+function FinancialAnalytics({ expenses, filterType, filterCategory, rawExpenses }) {
   if (!rawExpenses || rawExpenses.length === 0) return null;
 
   const total = expenses.reduce((acc, exp) => acc + exp.amount, 0);
   
-  // Group by category
+  // Group by category with Need/Want split
   const byCategory = expenses.reduce((acc, exp) => {
-    acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+    if (!acc[exp.category]) acc[exp.category] = { total: 0, needs: 0, wants: 0 };
+    acc[exp.category].total += exp.amount;
+    if (exp.necessity === 'Want') acc[exp.category].wants += exp.amount;
+    else acc[exp.category].needs += exp.amount;
     return acc;
   }, {});
 
@@ -21,17 +24,18 @@ function FinancialAnalytics({ expenses, filterType, setFilterType, rawExpenses }
   const needs = expenses.filter(e => e.necessity !== 'Want').reduce((acc, e) => acc + e.amount, 0);
   const wants = total - needs;
 
-  // Group by Type
+  // Group by Type with Need/Want split
   const byType = expenses.reduce((acc, exp) => {
     const t = exp.type || 'Personal';
-    acc[t] = (acc[t] || 0) + exp.amount;
+    if (!acc[t]) acc[t] = { total: 0, needs: 0, wants: 0 };
+    acc[t].total += exp.amount;
+    if (exp.necessity === 'Want') acc[t].wants += exp.amount;
+    else acc[t].needs += exp.amount;
     return acc;
   }, {});
 
-  const sortedCategories = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
-  const sortedTypes = Object.entries(byType).sort((a, b) => b[1] - a[1]);
-
-  const typeOptions = ["All", "Personal", "Manya", "Papa", "Mumma", "Family", "Others"];
+  const sortedCategories = Object.entries(byCategory).sort((a, b) => b[1].total - a[1].total);
+  const sortedTypes = Object.entries(byType).sort((a, b) => b[1].total - a[1].total);
 
   return (
     <div className="space-y-6 mb-8">
@@ -40,27 +44,6 @@ function FinancialAnalytics({ expenses, filterType, setFilterType, rawExpenses }
         <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-6 relative overflow-hidden group">
            <div className="flex justify-between items-center mb-4">
               <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Priority Audit</span>
-              <div className="flex bg-[#0B0B0F] border border-gray-800 rounded-lg p-0.5">
-                 {["All", "Personal", "Family"].map(t => (
-                    <button 
-                       key={t}
-                       onClick={() => setFilterType(t)}
-                       className={`px-2 py-1 text-[8px] font-black uppercase tracking-tighter rounded-md transition-all ${filterType === t ? 'bg-gray-800 text-white' : 'text-gray-500'}`}
-                    >
-                       {t}
-                    </button>
-                 ))}
-                 <select 
-                    value={["All", "Personal", "Family"].includes(filterType) ? "" : filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                    className="bg-transparent text-[8px] font-black uppercase tracking-tighter text-gray-500 outline-none px-1"
-                 >
-                    <option value="" disabled>More</option>
-                    {typeOptions.filter(t => !["All", "Personal", "Family"].includes(t)).map(t => (
-                       <option key={t} value={t} className="bg-[#0B0B0F]">{t}</option>
-                    ))}
-                 </select>
-              </div>
            </div>
 
            {total > 0 ? (
@@ -88,54 +71,82 @@ function FinancialAnalytics({ expenses, filterType, setFilterType, rawExpenses }
               </>
            ) : (
               <div className="py-4 text-center">
-                 <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">No data for {filterType}</p>
+                 <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">No data for selected filters</p>
               </div>
            )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-         <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-6">
-            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Categorical Burn</h4>
-            <div className="space-y-5">
-               {sortedCategories.slice(0, 5).map(([cat, amt]) => (
-                  <div key={cat} className="space-y-2">
-                     <div className="flex justify-between items-end">
-                        <span className="text-sm font-bold text-gray-200">{cat}</span>
-                        <span className="text-xs font-black text-white">₹{amt.toFixed(0)}</span>
+      <div className="grid grid-cols-1 gap-6">
+         {filterCategory === 'All' && (
+            <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-6">
+               <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Categorical Burn</h4>
+               <div className="space-y-6">
+                  {sortedCategories.slice(0, 5).map(([cat, data]) => (
+                     <div key={cat} className="space-y-2">
+                        <div className="flex justify-between items-end">
+                           <span className="text-sm font-bold text-gray-200">{cat}</span>
+                           <div className="text-right">
+                              <span className="text-[10px] font-black text-white block leading-none mb-0.5">₹{data.total.toFixed(0)}</span>
+                              <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter">
+                                {data.needs > 0 && <span className="text-emerald-500/60">₹{data.needs.toFixed(0)} N</span>}
+                                {data.needs > 0 && data.wants > 0 && " • "}
+                                {data.wants > 0 && <span className="text-amber-500/60">₹{data.wants.toFixed(0)} W</span>}
+                              </span>
+                           </div>
+                        </div>
+                        <div className="h-1.5 w-full bg-gray-900 rounded-full overflow-hidden flex">
+                           <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(data.needs/total)*100}%` }}
+                              className="h-full bg-emerald-500/40"
+                           />
+                           <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(data.wants/total)*100}%` }}
+                              className="h-full bg-amber-500/40"
+                           />
+                        </div>
                      </div>
-                     <div className="h-1 w-full bg-gray-900 rounded-full overflow-hidden">
-                        <motion.div 
-                           initial={{ width: 0 }}
-                           animate={{ width: `${(amt/total)*100}%` }}
-                           className="h-full bg-emerald-500/40"
-                        />
-                     </div>
-                  </div>
-               ))}
+                  ))}
+               </div>
             </div>
-         </div>
+         )}
 
-         <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-6">
-            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Entity Allocation</h4>
-            <div className="space-y-5">
-               {sortedTypes.map(([type, amt]) => (
-                  <div key={type} className="space-y-2">
-                     <div className="flex justify-between items-end">
-                        <span className="text-sm font-bold text-gray-200">{type}</span>
-                        <span className="text-xs font-black text-white">₹{amt.toFixed(0)}</span>
+         {filterType === 'All' && (
+            <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-6">
+               <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Entity Allocation</h4>
+               <div className="space-y-6">
+                  {sortedTypes.map(([type, data]) => (
+                     <div key={type} className="space-y-2">
+                        <div className="flex justify-between items-end">
+                           <span className="text-sm font-bold text-gray-200">{type}</span>
+                           <div className="text-right">
+                              <span className="text-[10px] font-black text-white block leading-none mb-0.5">₹{data.total.toFixed(0)}</span>
+                              <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter">
+                                {data.needs > 0 && <span className="text-emerald-500/60">₹{data.needs.toFixed(0)} N</span>}
+                                {data.needs > 0 && data.wants > 0 && " • "}
+                                {data.wants > 0 && <span className="text-amber-500/60">₹{data.wants.toFixed(0)} W</span>}
+                              </span>
+                           </div>
+                        </div>
+                        <div className="h-1.5 w-full bg-gray-900 rounded-full overflow-hidden flex">
+                           <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(data.needs/total)*100}%` }}
+                              className="h-full bg-emerald-500/40"
+                           />
+                           <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(data.wants/total)*100}%` }}
+                              className="h-full bg-amber-500/40"
+                           />
+                        </div>
                      </div>
-                     <div className="h-1 w-full bg-gray-900 rounded-full overflow-hidden">
-                        <motion.div 
-                           initial={{ width: 0 }}
-                           animate={{ width: `${(amt/total)*100}%` }}
-                           className="h-full bg-indigo-500/40"
-                        />
-                     </div>
-                  </div>
-               ))}
+                  ))}
+               </div>
             </div>
-         </div>
+         )}
       </div>
     </div>
   );
@@ -144,6 +155,7 @@ function FinancialAnalytics({ expenses, filterType, setFilterType, rawExpenses }
 export function Expenses() {
   const [viewType, setViewType] = useState('daily'); // 'daily', 'weekly', 'monthly'
   const [filterType, setFilterType] = useState('All');
+  const [filterCategory, setFilterCategory] = useState('All');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [expenseModalData, setExpenseModalData] = useState(null); 
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
@@ -175,7 +187,13 @@ export function Expenses() {
   const rawRange = useExpensesByRange(start, end) || [];
   
   const rawExpenses = viewType === 'daily' ? rawDaily : rawRange;
-  const expenses = filterType === 'All' ? rawExpenses : rawExpenses.filter(e => e.type === filterType);
+  
+  const expenses = rawExpenses.filter(e => {
+    const typeMatch = filterType === 'All' || e.type === filterType;
+    const catMatch = filterCategory === 'All' || e.category === filterCategory;
+    return typeMatch && catMatch;
+  });
+
   const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   const renderDateLabel = () => {
@@ -262,6 +280,37 @@ export function Expenses() {
         </button>
       </div>
 
+      <div className="flex flex-row items-center gap-2 mb-6">
+               {/* Type Filter Dropdown */}
+               <div className="flex bg-[#12121A] border border-gray-800 rounded-xl p-0.5 shadow-sm flex-1 min-w-0">
+                  <span className="pl-2 pr-1 py-2 text-[8px] font-black text-gray-600 uppercase flex items-center shrink-0">Type:</span>
+                  <select 
+                     value={filterType}
+                     onChange={(e) => setFilterType(e.target.value)}
+                     className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-400 outline-none py-2 flex-1 min-w-0"
+                  >
+                     {["All", "Personal", "Manya", "Papa", "Mumma", "Family", "Others"].map(t => (
+                        <option key={t} value={t} className="bg-[#0B0B0F]">{t}</option>
+                     ))}
+                  </select>
+               </div>
+
+               {/* Category Filter Dropdown */}
+               <div className="flex bg-[#12121A] border border-gray-800 rounded-xl p-0.5 shadow-sm flex-1 min-w-0">
+                  <span className="pl-2 pr-1 py-2 text-[8px] font-black text-gray-600 uppercase flex items-center shrink-0">Cat:</span>
+                  <select 
+                     value={filterCategory}
+                     onChange={(e) => setFilterCategory(e.target.value)}
+                     className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-400 outline-none py-2 flex-1 min-w-0"
+                  >
+                     <option value="All">All</option>
+                     {["Food", "Transport", "Shopping", "Entertainment", "Utilities", "Health", "Subscriptions", "Travel", "Gifts", "Investments", "Business Payments", "Other"].map(c => (
+                        <option key={c} value={c} className="bg-[#0B0B0F]">{c}</option>
+                     ))}
+                  </select>
+               </div>
+      </div>
+
       <div className="bg-[#12121A] border border-emerald-500/20 rounded-3xl p-6 shadow-lg relative mb-6 isolate overflow-hidden">
          <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-3xl -mr-20 -mt-20 -z-10 pointer-events-none"></div>
          
@@ -280,7 +329,12 @@ export function Expenses() {
          </div>
       </div>
 
-      <FinancialAnalytics expenses={expenses} filterType={filterType} setFilterType={setFilterType} rawExpenses={rawExpenses} />
+      <FinancialAnalytics 
+        expenses={expenses} 
+        filterType={filterType} 
+        filterCategory={filterCategory}
+        rawExpenses={rawExpenses} 
+      />
 
       <div className="space-y-3">
          {expenses.length === 0 ? (
