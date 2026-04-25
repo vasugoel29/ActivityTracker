@@ -5,11 +5,17 @@ export function useExpensesByDate(dateString) {
   return useSupabase('expenses', (q) => q.eq('date_string', dateString).order('timestamp', { ascending: false }), [dateString]);
 }
 
-export async function addExpense({ amount, category, description, dateString }) {
+export function useExpensesByRange(startMs, endMs) {
+  return useSupabase('expenses', (q) => q.gte('timestamp', startMs).lte('timestamp', endMs).order('timestamp', { ascending: false }), [startMs, endMs]);
+}
+
+export async function addExpense({ amount, category, description, dateString, necessity = 'Need', type = 'Personal' }) {
   const expense = {
     amount: parseFloat(amount) || 0,
     category,
     description: description || '',
+    necessity,
+    type,
     date_string: dateString,
   };
   const { error } = await supabase.from('expenses').insert([{ ...expense, id: crypto.randomUUID(), timestamp: Date.now() }]);

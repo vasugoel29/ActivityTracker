@@ -32,6 +32,9 @@ CREATE TABLE IF NOT EXISTS expenses (
   amount FLOAT NOT NULL,
   category TEXT NOT NULL,
   description TEXT,
+  payment_method TEXT DEFAULT 'UPI',
+  necessity TEXT DEFAULT 'Need',
+  type TEXT DEFAULT 'Personal',
   date_string TEXT NOT NULL,
   timestamp BIGINT NOT NULL
 );
