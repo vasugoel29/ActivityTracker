@@ -84,17 +84,17 @@ function FinancialAnalytics({ expenses, filterType, filterCategory, rawExpenses 
                <div className="space-y-6">
                   {sortedCategories.slice(0, 5).map(([cat, data]) => (
                      <div key={cat} className="space-y-2">
-                        <div className="flex justify-between items-end">
-                           <span className="text-sm font-bold text-gray-200">{cat}</span>
-                           <div className="text-right">
-                              <span className="text-[10px] font-black text-white block leading-none mb-0.5">₹{data.total.toFixed(0)}</span>
-                              <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter">
-                                {data.needs > 0 && <span className="text-emerald-500/60">₹{data.needs.toFixed(0)} N</span>}
-                                {data.needs > 0 && data.wants > 0 && " • "}
-                                {data.wants > 0 && <span className="text-amber-500/60">₹{data.wants.toFixed(0)} W</span>}
-                              </span>
-                           </div>
+                     <div className="flex justify-between items-baseline gap-2">
+                        <span className="text-sm font-bold text-gray-200 shrink-0">{cat}</span>
+                        <div className="flex flex-wrap justify-end items-baseline gap-x-2 gap-y-0.5 text-right">
+                           <span className="text-[10px] font-black text-white">₹{data.total.toFixed(0)}</span>
+                           <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter">
+                             {data.needs > 0 && <span className="text-emerald-500/60">₹{data.needs.toFixed(0)} N ({((data.needs/data.total)*100).toFixed(0)}%)</span>}
+                             {data.needs > 0 && data.wants > 0 && " • "}
+                             {data.wants > 0 && <span className="text-amber-500/60">₹{data.wants.toFixed(0)} W ({((data.wants/data.total)*100).toFixed(0)}%)</span>}
+                           </span>
                         </div>
+                     </div>
                         <div className="h-1.5 w-full bg-gray-900 rounded-full overflow-hidden flex">
                            <motion.div 
                               initial={{ width: 0 }}
@@ -119,17 +119,17 @@ function FinancialAnalytics({ expenses, filterType, filterCategory, rawExpenses 
                <div className="space-y-6">
                   {sortedTypes.map(([type, data]) => (
                      <div key={type} className="space-y-2">
-                        <div className="flex justify-between items-end">
-                           <span className="text-sm font-bold text-gray-200">{type}</span>
-                           <div className="text-right">
-                              <span className="text-[10px] font-black text-white block leading-none mb-0.5">₹{data.total.toFixed(0)}</span>
-                              <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter">
-                                {data.needs > 0 && <span className="text-emerald-500/60">₹{data.needs.toFixed(0)} N</span>}
-                                {data.needs > 0 && data.wants > 0 && " • "}
-                                {data.wants > 0 && <span className="text-amber-500/60">₹{data.wants.toFixed(0)} W</span>}
-                              </span>
-                           </div>
+                     <div className="flex justify-between items-baseline gap-2">
+                        <span className="text-sm font-bold text-gray-200 shrink-0">{type}</span>
+                        <div className="flex flex-wrap justify-end items-baseline gap-x-2 gap-y-0.5 text-right">
+                           <span className="text-[10px] font-black text-white">₹{data.total.toFixed(0)}</span>
+                           <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter">
+                             {data.needs > 0 && <span className="text-emerald-500/60">₹{data.needs.toFixed(0)} N ({((data.needs/data.total)*100).toFixed(0)}%)</span>}
+                             {data.needs > 0 && data.wants > 0 && " • "}
+                             {data.wants > 0 && <span className="text-amber-500/60">₹{data.wants.toFixed(0)} W ({((data.wants/data.total)*100).toFixed(0)}%)</span>}
+                           </span>
                         </div>
+                     </div>
                         <div className="h-1.5 w-full bg-gray-900 rounded-full overflow-hidden flex">
                            <motion.div 
                               initial={{ width: 0 }}
