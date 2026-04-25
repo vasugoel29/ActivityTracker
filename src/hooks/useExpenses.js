@@ -18,7 +18,8 @@ export async function addExpense({ amount, category, description, dateString, ne
     type,
     date_string: dateString,
   };
-  const { error } = await supabase.from('expenses').insert([{ ...expense, id: crypto.randomUUID(), timestamp: Date.now() }]);
+  const timestamp = dateString ? new Date(dateString).getTime() : Date.now();
+  const { error } = await supabase.from('expenses').insert([{ ...expense, id: crypto.randomUUID(), timestamp }]);
   if (error) throw error;
   triggerOptimisticRefetch('expenses');
 }

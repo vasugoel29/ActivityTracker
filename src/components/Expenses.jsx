@@ -440,49 +440,52 @@ export function Expenses() {
 
 function ExpenseModal({ mode, expense, dateStr, onClose }) {
   const isEdit = mode === 'edit';
-  const [amount, setAmount] = useState(isEdit ? expense.amount.toString() : '');
-  const [category, setCategory] = useState(isEdit ? expense.category : '');
-  const [description, setDescription] = useState(isEdit ? expense.description || '' : '');
-  const [necessity, setNecessity] = useState(isEdit ? expense.necessity || 'Need' : 'Need');
-  const [type, setType] = useState(isEdit ? expense.type || 'Personal' : 'Personal');
-  
-  const toast = useToast();
+   const [amount, setAmount] = useState(isEdit ? expense.amount.toString() : '');
+   const [category, setCategory] = useState(isEdit ? expense.category : '');
+   const [description, setDescription] = useState(isEdit ? expense.description || '' : '');
+   const [necessity, setNecessity] = useState(isEdit ? expense.necessity || 'Need' : 'Need');
+   const [type, setType] = useState(isEdit ? expense.type || 'Personal' : 'Personal');
+   const [selectedDate, setSelectedDate] = useState(isEdit ? expense.date_string : dateStr);
+   
+   const toast = useToast();
 
-  const handleSave = async () => {
-    if (!amount || parseFloat(amount) <= 0) return toast.error("Valid amount required");
-    if (!category.trim()) return toast.error("Category is required");
+   const handleSave = async () => {
+     if (!amount || parseFloat(amount) <= 0) return toast.error("Valid amount required");
+     if (!category.trim()) return toast.error("Category is required");
 
-    try {
-      if (isEdit) {
-        await updateExpense(expense.id, {
-          amount: parseFloat(amount),
-          category: category.trim(),
-          description: description.trim(),
-          necessity: necessity,
-          type: type
-        });
-        toast.success("Transaction updated");
-      } else {
-        await addExpense({ 
-           amount: parseFloat(amount), 
-           category: category.trim(), 
+     try {
+       if (isEdit) {
+         await updateExpense(expense.id, {
+           amount: parseFloat(amount),
+           category: category.trim(),
            description: description.trim(),
            necessity: necessity,
            type: type,
-           dateString: dateStr 
-        });
-        toast.success("Transaction recorded");
-      }
-      onClose();
-    } catch (error) {
-      toast.error(error.message || "Action failed");
-    }
-  };
+           date_string: selectedDate,
+           timestamp: new Date(selectedDate).getTime()
+         });
+         toast.success("Transaction updated");
+       } else {
+         await addExpense({ 
+            amount: parseFloat(amount), 
+            category: category.trim(), 
+            description: description.trim(),
+            necessity: necessity,
+            type: type,
+            dateString: selectedDate 
+         });
+         toast.success("Transaction recorded");
+       }
+       onClose();
+     } catch (error) {
+       toast.error(error.message || "Action failed");
+     }
+   };
 
-  const commonCategories = ["Food", "Transport", "Shopping", "Entertainment", "Utilities", "Health", "Subscriptions", "Travel", "Gifts", "Investments", "Business Payments", "Other"];
-  const typeOptions = ["Personal", "Manya", "Papa", "Mumma", "Family", "Others"];
+   const commonCategories = ["Food", "Transport", "Shopping", "Entertainment", "Utilities", "Health", "Subscriptions", "Travel", "Gifts", "Investments", "Business Payments", "Other"];
+   const typeOptions = ["Personal", "Manya", "Papa", "Mumma", "Family", "Others"];
 
-  return (
+   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-[#12121A] w-full max-w-md max-h-[95vh] overflow-y-auto rounded-[2rem] border border-gray-800 shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-2">
         <div className="flex justify-between items-center mb-6">
@@ -493,20 +496,34 @@ function ExpenseModal({ mode, expense, dateStr, onClose }) {
         </div>
 
         <div className="space-y-6">
-           <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Cost Amount (₹)</label>
-              <div className="relative">
-                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-black text-xl">₹</span>
-                 <input 
-                    type="number" 
-                    step="0.01"
-                    min="0"
-                    value={amount} 
-                    onChange={e => setAmount(e.target.value)} 
-                    placeholder="0.00" 
-                    className="w-full bg-[#0B0B0F] border border-gray-800 rounded-xl pl-10 pr-4 py-4 text-white font-black text-xl placeholder-gray-700 outline-none focus:border-emerald-500/50 transition-colors"
-                    autoFocus={!isEdit}
-                 />
+           <div className="grid grid-cols-2 gap-4">
+              <div>
+                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Cost (₹)</label>
+                 <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-black">₹</span>
+                    <input 
+                       type="number" 
+                       step="0.01"
+                       min="0"
+                       value={amount} 
+                       onChange={e => setAmount(e.target.value)} 
+                       placeholder="0.00" 
+                       className="w-full bg-[#0B0B0F] border border-gray-800 rounded-xl pl-8 pr-3 py-3 text-white font-black placeholder-gray-700 outline-none focus:border-emerald-500/50 transition-colors"
+                       autoFocus={!isEdit}
+                    />
+                 </div>
+              </div>
+              <div>
+                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Date</label>
+                 <div className="relative">
+                    <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                    <input 
+                       type="date" 
+                       value={selectedDate} 
+                       onChange={e => setSelectedDate(e.target.value)} 
+                       className="w-full bg-[#0B0B0F] border border-gray-800 rounded-xl pl-8 pr-3 py-3 text-white font-bold text-xs outline-none focus:border-emerald-500/50 transition-colors appearance-none"
+                    />
+                 </div>
               </div>
            </div>
 
