@@ -6,8 +6,8 @@ import { useToast } from './Toaster';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
-function FinancialAnalytics({ expenses }) {
-  if (expenses.length === 0) return null;
+function FinancialAnalytics({ expenses, filterType, setFilterType, rawExpenses }) {
+  if (!rawExpenses || rawExpenses.length === 0) return null;
 
   const total = expenses.reduce((acc, exp) => acc + exp.amount, 0);
   
@@ -31,6 +31,8 @@ function FinancialAnalytics({ expenses }) {
   const sortedCategories = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
   const sortedTypes = Object.entries(byType).sort((a, b) => b[1] - a[1]);
 
+  const typeOptions = ["All", "Personal", "Manya", "Papa", "Mumma", "Family", "Others"];
+
   return (
     <div className="space-y-6 mb-8">
       <div className="grid grid-cols-1 gap-4">
@@ -38,30 +40,57 @@ function FinancialAnalytics({ expenses }) {
         <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-6 relative overflow-hidden group">
            <div className="flex justify-between items-center mb-4">
               <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Priority Audit</span>
-              <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                 ₹{needs.toFixed(0)} Needs
-              </span>
+              <div className="flex bg-[#0B0B0F] border border-gray-800 rounded-lg p-0.5">
+                 {["All", "Personal", "Family"].map(t => (
+                    <button 
+                       key={t}
+                       onClick={() => setFilterType(t)}
+                       className={`px-2 py-1 text-[8px] font-black uppercase tracking-tighter rounded-md transition-all ${filterType === t ? 'bg-gray-800 text-white' : 'text-gray-500'}`}
+                    >
+                       {t}
+                    </button>
+                 ))}
+                 <select 
+                    value={["All", "Personal", "Family"].includes(filterType) ? "" : filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="bg-transparent text-[8px] font-black uppercase tracking-tighter text-gray-500 outline-none px-1"
+                 >
+                    <option value="" disabled>More</option>
+                    {typeOptions.filter(t => !["All", "Personal", "Family"].includes(t)).map(t => (
+                       <option key={t} value={t} className="bg-[#0B0B0F]">{t}</option>
+                    ))}
+                 </select>
+              </div>
            </div>
-           <div className="flex items-end gap-1 mb-3">
-              <span className="text-3xl font-black text-white leading-none">{((needs/total)*100).toFixed(0)}%</span>
-              <span className="text-[10px] text-gray-500 font-black uppercase mb-1">Functional spending</span>
-           </div>
-           <div className="h-2 w-full bg-gray-900 rounded-full overflow-hidden flex">
-              <motion.div 
-                 initial={{ width: 0 }}
-                 animate={{ width: `${(needs/total)*100}%` }}
-                 className="h-full bg-emerald-500"
-              />
-              <motion.div 
-                 initial={{ width: 0 }}
-                 animate={{ width: `${(wants/total)*100}%` }}
-                 className="h-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
-              />
-           </div>
-           <div className="flex justify-between mt-3">
-              <span className="text-[9px] font-black text-gray-600 uppercase">Essential</span>
-              <span className="text-[9px] font-black text-amber-500 uppercase">₹{wants.toFixed(0)} Leisure/Wants</span>
-           </div>
+
+           {total > 0 ? (
+              <>
+                 <div className="flex items-end gap-1 mb-3">
+                    <span className="text-3xl font-black text-white leading-none">{((needs/total)*100).toFixed(0)}%</span>
+                    <span className="text-[10px] text-gray-500 font-black uppercase mb-1">Functional ({filterType})</span>
+                 </div>
+                 <div className="h-2 w-full bg-gray-900 rounded-full overflow-hidden flex">
+                    <motion.div 
+                       initial={{ width: 0 }}
+                       animate={{ width: `${(needs/total)*100}%` }}
+                       className="h-full bg-emerald-500"
+                    />
+                    <motion.div 
+                       initial={{ width: 0 }}
+                       animate={{ width: `${(wants/total)*100}%` }}
+                       className="h-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                    />
+                 </div>
+                 <div className="flex justify-between mt-3">
+                    <span className="text-[9px] font-black text-emerald-500/80 uppercase">₹{needs.toFixed(0)} Needs</span>
+                    <span className="text-[9px] font-black text-amber-500 uppercase">₹{wants.toFixed(0)} Wants</span>
+                 </div>
+              </>
+           ) : (
+              <div className="py-4 text-center">
+                 <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">No data for {filterType}</p>
+              </div>
+           )}
         </div>
       </div>
 
@@ -114,6 +143,7 @@ function FinancialAnalytics({ expenses }) {
 
 export function Expenses() {
   const [viewType, setViewType] = useState('daily'); // 'daily', 'weekly', 'monthly'
+  const [filterType, setFilterType] = useState('All');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [expenseModalData, setExpenseModalData] = useState(null); 
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
@@ -141,11 +171,11 @@ export function Expenses() {
   const { start, end } = getRange();
   const dateStr = format(currentDate, 'yyyy-MM-dd');
   
-  // Use range hook for all views for consistency, or keep date hook for daily
-  const dailyExpenses = useExpensesByDate(dateStr) || [];
-  const rangeExpenses = useExpensesByRange(start, end) || [];
+  const rawDaily = useExpensesByDate(dateStr) || [];
+  const rawRange = useExpensesByRange(start, end) || [];
   
-  const expenses = viewType === 'daily' ? dailyExpenses : rangeExpenses;
+  const rawExpenses = viewType === 'daily' ? rawDaily : rawRange;
+  const expenses = filterType === 'All' ? rawExpenses : rawExpenses.filter(e => e.type === filterType);
   const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   const renderDateLabel = () => {
@@ -250,7 +280,7 @@ export function Expenses() {
          </div>
       </div>
 
-      <FinancialAnalytics expenses={expenses} />
+      <FinancialAnalytics expenses={expenses} filterType={filterType} setFilterType={setFilterType} rawExpenses={rawExpenses} />
 
       <div className="space-y-3">
          {expenses.length === 0 ? (
