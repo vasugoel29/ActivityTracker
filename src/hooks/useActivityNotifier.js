@@ -1,19 +1,19 @@
-import { useEffect, useRef } from 'react';
-import { supabase } from '../db/supabase';
+import { useEffect, useRef } from "react";
+import { supabase } from "../db/supabase";
 
 export function useActivityNotifier() {
   const lastNotified = useRef(0);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (typeof window === "undefined" || !("Notification" in window)) return;
 
-    if (Notification.permission === 'default') {
+    if (Notification.permission === "default") {
       Notification.requestPermission();
     }
 
     const checkEmptySlots = async () => {
-      if (Notification.permission !== 'granted') return;
-      
+      if (Notification.permission !== "granted") return;
+
       // Throttle notifications to at most once per hour
       if (Date.now() - lastNotified.current < 3600000) return;
 
@@ -22,14 +22,14 @@ export function useActivityNotifier() {
       startOfDay.setHours(0, 0, 0, 0);
 
       // We only care about past hours (up to the previous hour)
-      const maxHour = now.getHours() - 1; 
-      if (maxHour < 0) return; 
+      const maxHour = now.getHours() - 1;
+      if (maxHour < 0) return;
 
       const { data: logs } = await supabase
-        .from('activities')
-        .select('*')
-        .gte('start_time', startOfDay.getTime())
-        .lt('end_time', now.getTime());
+        .from("activities")
+        .select("*")
+        .gte("start_time", startOfDay.getTime())
+        .lt("end_time", now.getTime());
 
       if (!logs) return;
 
@@ -40,16 +40,20 @@ export function useActivityNotifier() {
         const slotEnd = new Date(startOfDay);
         slotEnd.setHours(h + 1, 0, 0, 0);
 
-        const hasLog = logs.some(l => l.start_time < slotEnd.getTime() && l.end_time > slotStart.getTime());
+        const hasLog = logs.some(
+          (l) =>
+            l.start_time < slotEnd.getTime() &&
+            l.end_time > slotStart.getTime(),
+        );
         if (!hasLog) {
           emptyCount++;
         }
       }
 
       if (emptyCount > 0) {
-        new Notification('Activity Tracker', {
-          body: `You have ${emptyCount} empty activity slot${emptyCount > 1 ? 's' : ''} today. Please fill them in!`,
-          icon: '/vite.svg'
+        new Notification("Activity Tracker", {
+          body: `You have ${emptyCount} empty activity slot${emptyCount > 1 ? "s" : ""} today. Please fill them in!`,
+          icon: "/vite.svg",
         });
         lastNotified.current = Date.now();
       }

@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-base: #0B0B0F;
+  --color-bg-base: #0b0b0f;
   --color-bg-inner: #050507;
-  --color-bg-card: #12121A;
+  --color-bg-card: #12121a;
   --color-accent-primary: #818cf8;
   --color-accent-secondary: #c084fc;
   --color-glass: rgba(255, 255, 255, 0.03);
@@ -14,8 +14,13 @@
 
 body {
   background-color: var(--color-bg-base);
-  color: #F8FAFC;
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: #f8fafc;
+  font-family:
+    "Inter",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.01em;
 }
@@ -43,13 +48,26 @@ body {
 }
 
 .gradient-surface {
-  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
 }
 
 @keyframes pulse-glow {
-  0% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
-  100% { opacity: 0.5; transform: scale(1); }
+  0% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
 }
 
 .animate-pulse-slow {

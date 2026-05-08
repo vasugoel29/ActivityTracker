@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 // eslint-disable-next-line no-unused-vars
-import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../db/supabase';
-import { triggerOptimisticRefetch } from '../hooks/useSupabase';
-import { Zap } from 'lucide-react';
+import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "../db/supabase";
+import { triggerOptimisticRefetch } from "../hooks/useSupabase";
+import { Zap } from "lucide-react";
 
 export function QuickLogModal({ isOpen, onClose }) {
-  const [activity, setActivity] = useState('');
+  const [activity, setActivity] = useState("");
 
   const handleSave = async () => {
     if (!activity || !activity.trim()) return;
@@ -21,17 +21,19 @@ export function QuickLogModal({ isOpen, onClose }) {
     const end_time = Date.now();
     const start_time = end_time - 30 * 60000; // Defaulting to an estimated 30-minute block
 
-    await supabase.from('activities').insert([{
-      activity: sanitizedActivity,
-      start_time,
-      end_time,
-      created_at: Date.now()
-    }]);
-    
-    triggerOptimisticRefetch('activities');
+    await supabase.from("activities").insert([
+      {
+        activity: sanitizedActivity,
+        start_time,
+        end_time,
+        created_at: Date.now(),
+      },
+    ]);
+
+    triggerOptimisticRefetch("activities");
 
     // Reset form
-    setActivity('');
+    setActivity("");
     onClose();
   };
 
@@ -39,7 +41,7 @@ export function QuickLogModal({ isOpen, onClose }) {
     <AnimatePresence>
       {isOpen && (
         <>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -47,12 +49,12 @@ export function QuickLogModal({ isOpen, onClose }) {
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex flex-col justify-end sm:justify-center p-0 sm:p-4"
             onClick={onClose}
           >
-            <motion.div 
-              initial={{ y: '100%' }}
+            <motion.div
+              initial={{ y: "100%" }}
               animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              onClick={e => e.stopPropagation()}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 350 }}
+              onClick={(e) => e.stopPropagation()}
               className="w-full sm:max-w-md mx-auto bg-[#12121A] rounded-t-3xl sm:rounded-3xl p-6 border border-gray-800 shadow-2xl"
             >
               <div className="flex justify-between items-center mb-6">
@@ -61,18 +63,18 @@ export function QuickLogModal({ isOpen, onClose }) {
                   Log Activity
                 </h3>
               </div>
-              
-              <input 
+
+              <input
                 autoFocus
-                type="text" 
-                placeholder="What did you just do?" 
+                type="text"
+                placeholder="What did you just do?"
                 value={activity}
-                onChange={e => setActivity(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSave()}
+                onChange={(e) => setActivity(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSave()}
                 className="w-full bg-[#0B0B0F] border border-gray-800 rounded-xl px-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-[#818cf8] focus:border-[#818cf8] mb-6 text-lg"
               />
 
-              <button 
+              <button
                 onClick={handleSave}
                 disabled={!activity.trim()}
                 className="w-full bg-white text-black font-bold py-4 rounded-xl text-lg hover:bg-gray-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"

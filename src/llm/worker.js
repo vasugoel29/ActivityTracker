@@ -1,11 +1,16 @@
-import { supabase } from '../db/supabase';
-import { formatISO } from 'date-fns';
-import { logToTerminal } from '../utils/logger';
+import { supabase } from "../db/supabase";
+import { formatISO } from "date-fns";
+import { logToTerminal } from "../utils/logger";
 
 const buildPrompt = (job) => {
   const { type, payload } = job;
-  const periodLabel = type === 'daily_report' ? 'Day' : type === 'weekly_report' ? 'Week' : 'Month';
-  
+  const periodLabel =
+    type === "daily_report"
+      ? "Day"
+      : type === "weekly_report"
+        ? "Week"
+        : "Month";
+
   return `You are a world-class Life Systems Architect and Strategic Auditor.
     
 Analyze the following user data (time logs, habits, expenses) for the past ${periodLabel} and provide a rigorous, unsentimental, and highly insightful life audit.
@@ -19,7 +24,7 @@ ${payload}
 
 1. **Life Balance**: Are all pillars (Health, Finances, Work, Spiritual, Social) consistently maintained?
 2. **Trend Analysis**: Detect improvements or declines across the specific ${periodLabel}.
-3. **Rhythm Detection**: ${type !== 'daily_report' ? 'Identify which specific days or times were the most productive/problematic.' : 'Identify peak and friction moments of the day.'}
+3. **Rhythm Detection**: ${type !== "daily_report" ? "Identify which specific days or times were the most productive/problematic." : "Identify peak and friction moments of the day."}
 4. **Discipline**: Are habits stable or inconsistent?
 5. **Financial Alignment**: Does spending reflect priorities or impulsivity?
 
@@ -32,9 +37,13 @@ ${payload}
 ## Life Score
 <0-100 score reflecting total effectiveness/sustainability>
 
-${type !== 'daily_report' ? `## Weekly Rhythm
+${
+  type !== "daily_report"
+    ? `## Weekly Rhythm
 - Peak Performance: [Specific Day + Evidence from logs]
-- Critical Friction: [Specific Day + Evidence from logs]` : ''}
+- Critical Friction: [Specific Day + Evidence from logs]`
+    : ""
+}
 
 ## Pillar Audits
 
@@ -77,26 +86,36 @@ PILLARS: Health, Finances, Work, Spiritual, Social
 };
 
 export async function processNextJob() {
-  const { data: job } = await supabase.from('llm_jobs').select('*').eq('status', 'pending').limit(1).maybeSingle();
+  const { data: job } = await supabase
+    .from("llm_jobs")
+    .select("*")
+    .eq("status", "pending")
+    .limit(1)
+    .maybeSingle();
   if (!job) return;
 
-  await supabase.from('llm_jobs').update({ status: 'processing' }).eq('id', job.id);
-  logToTerminal(`Found pending job: ${job.type} (ID: ${job.id.split('-')[0]}...)`);
+  await supabase
+    .from("llm_jobs")
+    .update({ status: "processing" })
+    .eq("id", job.id);
+  logToTerminal(
+    `Found pending job: ${job.type} (ID: ${job.id.split("-")[0]}...)`,
+  );
 
   if (job.meta && !job.meta.end_date && job.meta.start_date) {
-     const startD = new Date(job.meta.start_date);
-     if (job.type === 'daily_report') {
-        job.meta.end_date = formatISO(startD);
-     } else if (job.type === 'weekly_report') {
-        const endD = new Date(startD);
-        endD.setDate(endD.getDate() + 6);
-        job.meta.end_date = formatISO(endD);
-     } else if (job.type === 'monthly_report') {
-        const endD = new Date(startD);
-        endD.setMonth(endD.getMonth() + 1);
-        endD.setDate(0);
-        job.meta.end_date = formatISO(endD);
-     }
+    const startD = new Date(job.meta.start_date);
+    if (job.type === "daily_report") {
+      job.meta.end_date = formatISO(startD);
+    } else if (job.type === "weekly_report") {
+      const endD = new Date(startD);
+      endD.setDate(endD.getDate() + 6);
+      job.meta.end_date = formatISO(endD);
+    } else if (job.type === "monthly_report") {
+      const endD = new Date(startD);
+      endD.setMonth(endD.getMonth() + 1);
+      endD.setDate(0);
+      job.meta.end_date = formatISO(endD);
+    }
   }
 
   const controller = new AbortController();
@@ -104,21 +123,23 @@ export async function processNextJob() {
 
   const prompt = buildPrompt(job);
   try {
-    logToTerminal(`Sending prompt to Ollama (model: mistral, length: ${prompt.length})...`);
-    const response = await fetch('http://127.0.0.1:11434/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    logToTerminal(
+      `Sending prompt to Ollama (model: mistral, length: ${prompt.length})...`,
+    );
+    const response = await fetch("http://127.0.0.1:11434/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: 'mistral', 
+        model: "mistral",
         prompt,
-        stream: false
+        stream: false,
       }),
-      signal: controller.signal
+      signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) throw new Error('Ollama connection failed');
+    if (!response.ok) throw new Error("Ollama connection failed");
 
     const data = await response.json();
     const llmResponse = data.response;
@@ -129,32 +150,55 @@ export async function processNextJob() {
     if (scoreMatch) {
       extractedScore = parseInt(scoreMatch[1], 10);
     }
-    
-    await supabase.from('reports').insert([{
-      type: job.type,
-      start_date: job.meta?.start_date,
-      end_date: job.meta?.end_date,
-      content: llmResponse,
-      score: extractedScore,
-      created_at: Date.now()
-    }]);
 
-    await supabase.from('llm_jobs').update({ status: 'completed' }).eq('id', job.id);
-    logToTerminal(`Successfully generated ${job.type} report with score: ${extractedScore}.`);
+    await supabase.from("reports").insert([
+      {
+        type: job.type,
+        start_date: job.meta?.start_date,
+        end_date: job.meta?.end_date,
+        content: llmResponse,
+        score: extractedScore,
+        created_at: Date.now(),
+      },
+    ]);
 
+    await supabase
+      .from("llm_jobs")
+      .update({ status: "completed" })
+      .eq("id", job.id);
+    logToTerminal(
+      `Successfully generated ${job.type} report with score: ${extractedScore}.`,
+    );
   } catch (error) {
     logToTerminal(`Error processing ${job.type}: ${error.message}`);
-    if (error.name === 'AbortError') {
-       await supabase.from('llm_jobs').update({ status: 'pending', error: 'Ollama model timeout (300s)' }).eq('id', job.id);
+    if (error.name === "AbortError") {
+      await supabase
+        .from("llm_jobs")
+        .update({ status: "pending", error: "Ollama model timeout (300s)" })
+        .eq("id", job.id);
     } else {
-       const prevRetriesMatch = job.error?.match(/^\[Retry (\d+)\]/);
-       const retries = prevRetriesMatch ? parseInt(prevRetriesMatch[1], 10) + 1 : 1;
-       
-       if (retries >= 5) {
-          await supabase.from('llm_jobs').update({ status: 'failed', error: `Max retries reached: ${error.message}` }).eq('id', job.id);
-       } else {
-          await supabase.from('llm_jobs').update({ status: 'pending', error: `[Retry ${retries}] ${error.message}` }).eq('id', job.id);
-       }
+      const prevRetriesMatch = job.error?.match(/^\[Retry (\d+)\]/);
+      const retries = prevRetriesMatch
+        ? parseInt(prevRetriesMatch[1], 10) + 1
+        : 1;
+
+      if (retries >= 5) {
+        await supabase
+          .from("llm_jobs")
+          .update({
+            status: "failed",
+            error: `Max retries reached: ${error.message}`,
+          })
+          .eq("id", job.id);
+      } else {
+        await supabase
+          .from("llm_jobs")
+          .update({
+            status: "pending",
+            error: `[Retry ${retries}] ${error.message}`,
+          })
+          .eq("id", job.id);
+      }
     }
   }
 }
@@ -162,10 +206,11 @@ export async function processNextJob() {
 // eslint-disable-next-line no-unused-vars
 let workerTimeoutId = null;
 export function startWorker() {
-  if (typeof window !== 'undefined') {
-    supabase.from('llm_jobs')
-      .update({ status: 'pending', error: 'Recovered stuck job on startup' })
-      .eq('status', 'processing')
+  if (typeof window !== "undefined") {
+    supabase
+      .from("llm_jobs")
+      .update({ status: "pending", error: "Recovered stuck job on startup" })
+      .eq("status", "processing")
       .then(() => {
         const loop = async () => {
           try {
@@ -179,4 +224,3 @@ export function startWorker() {
       });
   }
 }
-

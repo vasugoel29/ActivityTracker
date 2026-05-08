@@ -1,5 +1,9 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { getDailyDistribution, getMissingTime, getWeeklyProductivity } from '../db/queries';
+import { useLiveQuery } from "dexie-react-hooks";
+import {
+  getDailyDistribution,
+  getMissingTime,
+  getWeeklyProductivity,
+} from "../db/queries";
 
 export function useDailyMetrics() {
   return useLiveQuery(async () => {

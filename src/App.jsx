@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from './db/supabase';
-import { Layout } from './components/Layout';
-import { ActivityLog } from './components/ActivityLog';
-import { BulkLoggerModal } from './components/BulkLoggerModal';
-import { Expenses } from './components/Expenses';
-import { Reports } from './components/Reports';
-import { Habits } from './components/Habits';
-import { Auth } from './components/Auth';
-import { FileText, Loader2 } from 'lucide-react';
-import { useActivityNotifier } from './hooks/useActivityNotifier';
-import { ToastProvider } from './components/Toaster';
-import { GlobalJobQueue } from './components/GlobalJobQueue';
+import React, { useState, useEffect } from "react";
+import { supabase } from "./db/supabase";
+import { Layout } from "./components/Layout";
+import { ActivityLog } from "./components/ActivityLog";
+import { BulkLoggerModal } from "./components/BulkLoggerModal";
+import { Expenses } from "./components/Expenses";
+import { Reports } from "./components/Reports";
+import { Habits } from "./components/Habits";
+import { Auth } from "./components/Auth";
+import { FileText, Loader2 } from "lucide-react";
+import { useActivityNotifier } from "./hooks/useActivityNotifier";
+import { ToastProvider } from "./components/Toaster";
+import { GlobalJobQueue } from "./components/GlobalJobQueue";
 
 function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [currentTab, setCurrentTab] = useState(() => {
-    return localStorage.getItem('activeTab') || 'home';
+    return localStorage.getItem("activeTab") || "home";
   });
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
@@ -29,9 +29,11 @@ function App() {
     });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (event === 'PASSWORD_RECOVERY') {
+      if (event === "PASSWORD_RECOVERY") {
         setIsRecoveryMode(true);
       }
     });
@@ -40,7 +42,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('activeTab', currentTab);
+    localStorage.setItem("activeTab", currentTab);
   }, [currentTab]);
 
   useActivityNotifier();
@@ -56,7 +58,10 @@ function App() {
   if (!session || isRecoveryMode) {
     return (
       <ToastProvider>
-        <Auth recoveryMode={isRecoveryMode} onPasswordUpdated={() => setIsRecoveryMode(false)} />
+        <Auth
+          recoveryMode={isRecoveryMode}
+          onPasswordUpdated={() => setIsRecoveryMode(false)}
+        />
       </ToastProvider>
     );
   }
@@ -64,11 +69,15 @@ function App() {
   return (
     <ToastProvider>
       <GlobalJobQueue />
-      <Layout currentTab={currentTab} setCurrentTab={setCurrentTab} user={session.user}>
+      <Layout
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        user={session.user}
+      >
         <div className="animate-in fade-in duration-300">
-          {currentTab === 'home' && (
+          {currentTab === "home" && (
             <div className="flex justify-end p-2 -mb-2">
-              <button 
+              <button
                 onClick={() => setIsBulkModalOpen(true)}
                 className="text-xs font-bold text-gray-500 hover:text-[#818cf8] transition-colors flex items-center gap-1 bg-[#12121A] px-3 py-1.5 rounded-lg border border-gray-800 shadow-sm z-20"
               >
@@ -78,13 +87,16 @@ function App() {
             </div>
           )}
 
-          {currentTab === 'home' && <ActivityLog />}
-          {currentTab === 'dashboard' && <Expenses />}
-          {currentTab === 'reports' && <Reports />}
-          {currentTab === 'goals' && <Habits />}
+          {currentTab === "home" && <ActivityLog />}
+          {currentTab === "dashboard" && <Expenses />}
+          {currentTab === "reports" && <Reports />}
+          {currentTab === "goals" && <Habits />}
         </div>
 
-        <BulkLoggerModal isOpen={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} />
+        <BulkLoggerModal
+          isOpen={isBulkModalOpen}
+          onClose={() => setIsBulkModalOpen(false)}
+        />
       </Layout>
     </ToastProvider>
   );
