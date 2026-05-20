@@ -693,7 +693,7 @@ export function Reports() {
 
           {/* Pillars Grid - Standardized & Improved Metrics */}
           {/* Pillars Grid - Vertically Organized for Clarity */}
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Object.keys(PILLAR_COLORS).map((pillarName, i) => {
               const p = parsed.pillars.find((x) => x.name === pillarName) || {
                 name: pillarName,
@@ -766,7 +766,7 @@ export function Reports() {
           {/* Insight Cards Section - Switch to 1-col for maximum legibility */}
           <div className="space-y-12">
             {/* Mirror Strengths & Weaknesses - Vertical Split for Breathing Room */}
-            <div className="space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               {/* Strengths */}
               <div className="space-y-5">
                 <h3 className="flex items-center gap-2 text-[11px] font-black text-emerald-400 uppercase tracking-[0.2em] px-2">

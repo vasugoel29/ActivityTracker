@@ -136,7 +136,7 @@ function FinancialAnalytics({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
         {filterCategory === "All" && (
           <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-6">
             <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">
@@ -449,138 +449,150 @@ export function Expenses() {
         </div>
       </div>
 
-      <div className="bg-[#12121A] border border-emerald-500/20 rounded-3xl p-6 shadow-lg relative mb-6 isolate overflow-hidden">
-        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-3xl -mr-20 -mt-20 -z-10 pointer-events-none"></div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Side: Balance & Analytics */}
+        <div className="lg:col-span-5 lg:sticky lg:top-6 space-y-6">
+          <div className="bg-[#12121A] border border-emerald-500/20 rounded-3xl p-6 shadow-lg relative isolate overflow-hidden">
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-3xl -mr-20 -mt-20 -z-10 pointer-events-none"></div>
 
-        <div className="flex justify-between items-end">
-          <div>
-            <span className="text-[11px] text-emerald-500 uppercase tracking-widest font-black mb-1.5 flex items-center gap-1.5">
-              <TrendingDown size={14} />{" "}
-              {viewType === "daily"
-                ? "Daily"
-                : viewType === "weekly"
-                  ? "Weekly"
-                  : "Monthly"}{" "}
-              Burn
-            </span>
-            <div className="flex items-start gap-1">
-              <span className="text-2xl font-bold text-gray-500 mt-2">₹</span>
-              <span className="text-6xl font-black text-white tracking-tighter tabular-nums leading-none">
-                {totalSpent.toFixed(2).split(".")[0]}
-                <span className="text-3xl text-gray-400">
-                  .{totalSpent.toFixed(2).split(".")[1]}
+            <div className="flex justify-between items-end">
+              <div>
+                <span className="text-[11px] text-emerald-500 uppercase tracking-widest font-black mb-1.5 flex items-center gap-1.5">
+                  <TrendingDown size={14} />{" "}
+                  {viewType === "daily"
+                    ? "Daily"
+                    : viewType === "weekly"
+                      ? "Weekly"
+                      : "Monthly"}{" "}
+                  Burn
                 </span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <FinancialAnalytics
-        expenses={expenses}
-        filterType={filterType}
-        filterCategory={filterCategory}
-        rawExpenses={rawExpenses}
-      />
-
-      <div className="space-y-3">
-        {expenses.length === 0 ? (
-          <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-10 flex flex-col items-center justify-center text-center mt-2">
-            <div className="w-16 h-16 bg-[#0B0B0F] rounded-full flex items-center justify-center mb-4 border border-gray-800 ring-1 ring-white/5">
-              <Wallet size={28} className="text-gray-500" />
-            </div>
-            <h3 className="text-white font-bold mb-2 text-lg">
-              No Expenses Recorded
-            </h3>
-            <p className="text-gray-500 text-sm max-w-[200px] mt-1 mb-6">
-              Financial discipline begins with friction tracking. Log a cost.
-            </p>
-            <button
-              onClick={() => setExpenseModalData({ mode: "add" })}
-              className="text-emerald-500 font-bold text-sm bg-emerald-500/10 px-4 py-2 rounded-xl"
-            >
-              Add Transaction
-            </button>
-          </div>
-        ) : (
-          expenses.map((exp) => (
-            <div key={exp.id} className="relative overflow-hidden rounded-2xl">
-              {/* Delete Action Background */}
-              <div className="absolute inset-0 bg-red-500/20 flex items-center justify-end px-6">
-                <Trash2 size={24} className="text-red-500" />
+                <div className="flex items-start gap-1">
+                  <span className="text-2xl font-bold text-gray-500 mt-2">₹</span>
+                  <span className="text-6xl font-black text-white tracking-tighter tabular-nums leading-none">
+                    {totalSpent.toFixed(2).split(".")[0]}
+                    <span className="text-3xl text-gray-400">
+                      .{totalSpent.toFixed(2).split(".")[1]}
+                    </span>
+                  </span>
+                </div>
               </div>
-
-              <motion.div
-                drag="x"
-                dragConstraints={{ right: 0, left: -100 }}
-                dragElastic={0.1}
-                onDragEnd={(_, info) => {
-                  if (info.offset.x < -80) setDeleteConfirmId(exp.id);
-                }}
-                className="bg-[#12121A] border border-gray-800 p-4 rounded-2xl flex justify-between items-center relative z-10 transition-colors hover:border-gray-700 touch-pan-y"
-              >
-                <div className="flex items-center gap-4 flex-1 min-w-0 mr-4">
-                  <div className="h-12 w-12 rounded-2xl bg-[#0B0B0F] border border-gray-800 flex items-center justify-center shrink-0">
-                    <CreditCard
-                      size={20}
-                      className={
-                        exp.necessity === "Want"
-                          ? "text-amber-500/70"
-                          : "text-emerald-500/70"
-                      }
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-white text-[15px] truncate">
-                        {exp.category}
-                      </h3>
-                      <span
-                        className={`text-[9px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter ${exp.type === "Personal" ? "bg-gray-800 text-gray-400" : "bg-indigo-500/10 text-indigo-400"}`}
-                      >
-                        {exp.type}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <p className="text-gray-500 text-xs truncate max-w-[150px]">
-                        {exp.description || "No notes"}
-                      </p>
-                      <span className="text-gray-800 text-[10px]">•</span>
-                      <span className="text-[10px] text-gray-600 font-mono">
-                        {new Date(exp.timestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <span className="font-black text-white text-lg tabular-nums tracking-tight block">
-                      ₹{parseFloat(exp.amount).toFixed(2)}
-                    </span>
-                    <span
-                      className={`text-[9px] font-black uppercase tracking-widest ${exp.necessity === "Want" ? "text-amber-500" : "text-emerald-500"}`}
-                    >
-                      {exp.necessity}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() =>
-                      setExpenseModalData({ mode: "edit", expense: exp })
-                    }
-                    className="h-10 w-10 bg-[#0B0B0F] border border-gray-800 rounded-xl flex items-center justify-center text-gray-500 hover:text-emerald-400 hover:border-emerald-500/30 transition-all"
-                    title="Edit"
-                  >
-                    <Pencil size={18} />
-                  </button>
-                </div>
-              </motion.div>
             </div>
-          ))
-        )}
+          </div>
+
+          <FinancialAnalytics
+            expenses={expenses}
+            filterType={filterType}
+            filterCategory={filterCategory}
+            rawExpenses={rawExpenses}
+          />
+        </div>
+
+        {/* Right Side: Transaction Ledger */}
+        <div className="lg:col-span-7 space-y-3">
+          <div className="flex justify-between items-center mb-1 px-1">
+            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+              Transaction Ledger ({expenses.length})
+            </span>
+          </div>
+
+          {expenses.length === 0 ? (
+            <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-10 flex flex-col items-center justify-center text-center mt-2">
+              <div className="w-16 h-16 bg-[#0B0B0F] rounded-full flex items-center justify-center mb-4 border border-gray-800 ring-1 ring-white/5">
+                <Wallet size={28} className="text-gray-500" />
+              </div>
+              <h3 className="text-white font-bold mb-2 text-lg">
+                No Expenses Recorded
+              </h3>
+              <p className="text-gray-500 text-sm max-w-[200px] mt-1 mb-6">
+                Financial discipline begins with friction tracking. Log a cost.
+              </p>
+              <button
+                onClick={() => setExpenseModalData({ mode: "add" })}
+                className="text-emerald-500 font-bold text-sm bg-emerald-500/10 px-4 py-2 rounded-xl"
+              >
+                Add Transaction
+              </button>
+            </div>
+          ) : (
+            expenses.map((exp) => (
+              <div key={exp.id} className="relative overflow-hidden rounded-2xl">
+                {/* Delete Action Background */}
+                <div className="absolute inset-0 bg-red-500/20 flex items-center justify-end px-6">
+                  <Trash2 size={24} className="text-red-500" />
+                </div>
+
+                <motion.div
+                  drag="x"
+                  dragConstraints={{ right: 0, left: -100 }}
+                  dragElastic={0.1}
+                  onDragEnd={(_, info) => {
+                    if (info.offset.x < -80) setDeleteConfirmId(exp.id);
+                  }}
+                  className="bg-[#12121A] border border-gray-800 p-4 rounded-2xl flex justify-between items-center relative z-10 transition-colors hover:border-gray-700 touch-pan-y"
+                >
+                  <div className="flex items-center gap-4 flex-1 min-w-0 mr-4">
+                    <div className="h-12 w-12 rounded-2xl bg-[#0B0B0F] border border-gray-800 flex items-center justify-center shrink-0">
+                      <CreditCard
+                        size={20}
+                        className={
+                          exp.necessity === "Want"
+                            ? "text-amber-500/70"
+                            : "text-emerald-500/70"
+                        }
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-white text-[15px] truncate">
+                          {exp.category}
+                        </h3>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter ${exp.type === "Personal" ? "bg-gray-800 text-gray-400" : "bg-indigo-500/10 text-indigo-400"}`}
+                        >
+                          {exp.type}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <p className="text-gray-500 text-xs truncate max-w-[150px]">
+                          {exp.description || "No notes"}
+                        </p>
+                        <span className="text-gray-800 text-[10px]">•</span>
+                        <span className="text-[10px] text-gray-600 font-mono">
+                          {new Date(exp.timestamp).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <span className="font-black text-white text-lg tabular-nums tracking-tight block">
+                        ₹{parseFloat(exp.amount).toFixed(2)}
+                      </span>
+                      <span
+                        className={`text-[9px] font-black uppercase tracking-widest ${exp.necessity === "Want" ? "text-amber-500" : "text-emerald-500"}`}
+                      >
+                        {exp.necessity}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() =>
+                        setExpenseModalData({ mode: "edit", expense: exp })
+                      }
+                      className="h-10 w-10 bg-[#0B0B0F] border border-gray-800 rounded-xl flex items-center justify-center text-gray-500 hover:text-emerald-400 hover:border-emerald-500/30 transition-all"
+                      title="Edit"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {expenseModalData && (

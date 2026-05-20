@@ -25,7 +25,7 @@ export function ActivityLog() {
   const hoursList = Array.from({ length: maxHour + 1 }, (_, i) => i);
 
   return (
-    <div className="space-y-4 pt-2 px-2 pb-6">
+    <div className="space-y-4 pt-2 px-2 pb-6 max-w-3xl mx-auto w-full">
       <header className="flex justify-between items-center bg-[#12121A] p-4 rounded-3xl border border-gray-800 shadow-sm relative mb-4 z-10">
         <button
           onClick={() => setCurrentDate(subDays(currentDate, 1))}
