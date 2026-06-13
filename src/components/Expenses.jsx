@@ -19,7 +19,19 @@ import {
   Calendar,
   Target,
   TrendingUp,
+  Zap,
+  Copy,
+  ExternalLink,
+  Check,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import {
+  useUnprocessedSms,
+  markSmsProcessed,
+  useUserSettings,
+} from "../hooks/useIncomingSms";
+import { parseSMSExpense } from "../utils/smsParser";
 import {
   format,
   subDays,
@@ -256,6 +268,10 @@ export function Expenses() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [expenseModalData, setExpenseModalData] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isAutomationOpen, setIsAutomationOpen] = useState(false);
+  const toast = useToast();
+
+  const pendingSms = useUnprocessedSms() || [];
 
   const getRange = () => {
     if (viewType === "daily") {
@@ -344,13 +360,22 @@ export function Expenses() {
         <h1 className="text-3xl font-extrabold text-white tracking-tight">
           Finances
         </h1>
-        <button
-          onClick={() => setExpenseModalData({ mode: "add" })}
-          className="bg-emerald-500 hover:bg-emerald-400 text-white px-3 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-colors flex items-center gap-1.5"
-        >
-          <Plus size={16} strokeWidth={3} />
-          Log Cost
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsAutomationOpen(true)}
+            className="bg-[#12121A] hover:bg-gray-800 text-indigo-400 border border-gray-800 p-2.5 rounded-xl transition-all flex items-center justify-center cursor-pointer shadow-md hover:border-gray-700 active:scale-95"
+            title="Transaction Webhook Automation"
+          >
+            <Zap size={16} />
+          </button>
+          <button
+            onClick={() => setExpenseModalData({ mode: "add" })}
+            className="bg-emerald-500 hover:bg-emerald-400 text-white px-3 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-colors flex items-center gap-1.5"
+          >
+            <Plus size={16} strokeWidth={3} />
+            Log Cost
+          </button>
+        </div>
       </header>
 
       {/* View Switcher Tabs */}
@@ -489,6 +514,128 @@ export function Expenses() {
 
         {/* Right Side: Transaction Ledger */}
         <div className="lg:col-span-7 space-y-3">
+          {/* Pending Messages Queue */}
+          {pendingSms.length > 0 && (
+            <div className="mb-6 space-y-3 animate-in fade-in slide-in-from-top-4 duration-350">
+              <div className="flex justify-between items-center px-1">
+                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <Zap size={12} className="animate-pulse" />
+                  Pending Messages ({pendingSms.length})
+                </span>
+              </div>
+              <div className="space-y-3">
+                {pendingSms.map((msg) => {
+                  const parsed = parseSMSExpense(msg.body);
+                  return (
+                    <div
+                      key={msg.id}
+                      className="bg-gradient-to-r from-[#171725] to-[#12121A] border border-indigo-500/10 p-4 rounded-2xl relative overflow-hidden group shadow-lg"
+                    >
+                      <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                      
+                      <div className="relative z-10 flex flex-col gap-3">
+                        <div className="text-xs text-gray-400 font-medium italic bg-[#0B0B0F]/60 p-2.5 rounded-xl border border-gray-900/60 line-clamp-2 select-all" title={msg.body}>
+                          "{msg.body}"
+                        </div>
+
+                        {parsed ? (
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-800/30 pt-2.5">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                                <CreditCard size={16} className="text-indigo-400" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-white text-[14px]">
+                                    {parsed.category}
+                                  </span>
+                                  <span className="text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">
+                                    {parsed.type}
+                                  </span>
+                                </div>
+                                <span className={`text-[9px] font-black uppercase tracking-widest ${parsed.necessity === "Want" ? "text-amber-500" : "text-emerald-500"}`}>
+                                  {parsed.necessity}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="text-right">
+                              <span className="font-black text-white text-md tabular-nums tracking-tight block">
+                                ₹{parsed.amount.toFixed(2)}
+                              </span>
+                              <span className="text-[8px] text-gray-500 font-mono block">
+                                Inferred Cost
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-amber-500/80 font-bold bg-amber-500/5 p-2 rounded-lg border border-amber-500/10">
+                            Could not auto-extract transaction details. Use Edit to log manually.
+                          </div>
+                        )}
+
+                        <div className="flex justify-end gap-2 border-t border-gray-800/30 pt-2">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await markSmsProcessed(msg.id);
+                                toast.success("Message dismissed");
+                              } catch (error) {
+                                console.error(error);
+                                toast.error("Failed to dismiss message");
+                              }
+                            }}
+                            className="px-3 py-1.5 text-[9px] font-black text-gray-400 hover:text-white uppercase tracking-wider bg-gray-900/60 hover:bg-gray-800/80 border border-gray-850 rounded-lg transition-all cursor-pointer"
+                          >
+                            Dismiss
+                          </button>
+                          <button
+                            onClick={() => {
+                              setExpenseModalData({
+                                mode: "add",
+                                defaultValues: parsed || { description: msg.body },
+                                associatedSmsId: msg.id,
+                                dateStr: format(new Date(msg.created_at), "yyyy-MM-dd")
+                              });
+                            }}
+                            className="px-3 py-1.5 text-[9px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-wider bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg transition-all cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          {parsed && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await addExpense({
+                                    amount: parsed.amount,
+                                    category: parsed.category,
+                                    description: parsed.description,
+                                    necessity: parsed.necessity,
+                                    type: parsed.type,
+                                    dateString: format(new Date(msg.created_at), "yyyy-MM-dd")
+                                  });
+                                  await markSmsProcessed(msg.id);
+                                  toast.success(`Logged ₹${parsed.amount} for ${parsed.category}!`);
+                                } catch (error) {
+                                  console.error(error);
+                                  toast.error("Failed to log expense");
+                                }
+                              }}
+                              className="px-3 py-1.5 text-[9px] font-black text-white uppercase tracking-wider bg-indigo-500 hover:bg-indigo-400 shadow-md shadow-indigo-500/25 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                              <Check size={10} strokeWidth={3} />
+                              Approve
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between items-center mb-1 px-1">
             <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
               Transaction Ledger ({expenses.length})
@@ -599,8 +746,16 @@ export function Expenses() {
         <ExpenseModal
           mode={expenseModalData.mode}
           expense={expenseModalData.expense}
-          dateStr={dateStr}
+          defaultValues={expenseModalData.defaultValues}
+          associatedSmsId={expenseModalData.associatedSmsId}
+          dateStr={expenseModalData.dateStr || dateStr}
           onClose={() => setExpenseModalData(null)}
+        />
+      )}
+
+      {isAutomationOpen && (
+        <AutomationModal
+          onClose={() => setIsAutomationOpen(false)}
         />
       )}
 
@@ -637,18 +792,22 @@ export function Expenses() {
   );
 }
 
-function ExpenseModal({ mode, expense, dateStr, onClose }) {
+function ExpenseModal({ mode, expense, defaultValues, associatedSmsId, dateStr, onClose }) {
   const isEdit = mode === "edit";
-  const [amount, setAmount] = useState(isEdit ? expense.amount.toString() : "");
-  const [category, setCategory] = useState(isEdit ? expense.category : "");
+  const [amount, setAmount] = useState(
+    isEdit ? expense.amount.toString() : (defaultValues?.amount ? defaultValues.amount.toString() : "")
+  );
+  const [category, setCategory] = useState(
+    isEdit ? expense.category : (defaultValues?.category || "")
+  );
   const [description, setDescription] = useState(
-    isEdit ? expense.description || "" : "",
+    isEdit ? expense.description || "" : (defaultValues?.description || "")
   );
   const [necessity, setNecessity] = useState(
-    isEdit ? expense.necessity || "Need" : "Need",
+    isEdit ? expense.necessity || "Need" : (defaultValues?.necessity || "Need")
   );
   const [type, setType] = useState(
-    isEdit ? expense.type || "Personal" : "Personal",
+    isEdit ? expense.type || "Personal" : (defaultValues?.type || "Personal")
   );
   const [selectedDate, setSelectedDate] = useState(
     isEdit ? expense.date_string : dateStr,
@@ -682,6 +841,9 @@ function ExpenseModal({ mode, expense, dateStr, onClose }) {
           type: type,
           dateString: selectedDate,
         });
+        if (associatedSmsId) {
+          await markSmsProcessed(associatedSmsId);
+        }
         toast.success("Transaction recorded");
       }
       onClose();
@@ -848,6 +1010,209 @@ function ExpenseModal({ mode, expense, dateStr, onClose }) {
             {isEdit ? "Update Transaction" : "Record Transaction"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AutomationModal({ onClose }) {
+  const { settings, loading } = useUserSettings();
+  const [showKey, setShowKey] = useState(false);
+  const [showAnon, setShowAnon] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedAnon, setCopiedAnon] = useState(false);
+  const [activeGuide, setActiveGuide] = useState("ios"); // 'ios' or 'android'
+
+  const toast = useToast();
+
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+  const projectUrl = import.meta.env.VITE_SUPABASE_URL || "";
+  const webhookUrl = `${projectUrl}/rest/v1/rpc/log_sms_via_api_key`;
+
+  const copyToClipboard = (text, setCopied, label) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success(`${label} copied to clipboard!`);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#12121A] w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-[2rem] border border-gray-800 shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-2">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            <Zap size={20} className="text-indigo-400 animate-pulse" />
+            Transaction Webhook
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-500 hover:text-white bg-gray-900 rounded-full transition-colors cursor-pointer"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="py-12 flex flex-col items-center justify-center">
+            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-xs text-gray-500 mt-3 font-bold uppercase tracking-widest">Generating credentials...</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Send raw transaction SMS alerts directly from your phone to this web app. 
+              Configure your phone to send an HTTP POST request to the webhook below.
+            </p>
+
+            <div className="space-y-4 bg-[#0B0B0F] p-5 rounded-2xl border border-gray-800/80 shadow-inner">
+              <div>
+                <label className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">
+                  Webhook URL
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={webhookUrl}
+                    className="flex-1 bg-black/40 border border-gray-800 rounded-lg px-3 py-2 text-xs font-mono text-gray-350 outline-none select-all"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(webhookUrl, setCopiedUrl, "Webhook URL")}
+                    className="p-2 bg-gray-900 border border-gray-800 rounded-lg text-gray-400 hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                    title="Copy URL"
+                  >
+                    {copiedUrl ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">
+                  Your Webhook API Key (Keep Secret)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type={showKey ? "text" : "password"}
+                    readOnly
+                    value={settings?.api_key || ""}
+                    className="flex-1 bg-black/40 border border-gray-800 rounded-lg px-3 py-2 text-xs font-mono text-gray-350 outline-none select-all"
+                  />
+                  <button
+                    onClick={() => setShowKey(!showKey)}
+                    className="p-2 bg-gray-900 border border-gray-800 rounded-lg text-gray-400 hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                    title={showKey ? "Hide API Key" : "Show API Key"}
+                  >
+                    {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                  <button
+                    onClick={() => copyToClipboard(settings?.api_key, setCopiedKey, "API Key")}
+                    className="p-2 bg-gray-900 border border-gray-800 rounded-lg text-gray-400 hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                    title="Copy API Key"
+                  >
+                    {copiedKey ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">
+                  Supabase Public Anon Key
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type={showAnon ? "text" : "password"}
+                    readOnly
+                    value={anonKey}
+                    className="flex-1 bg-black/40 border border-gray-800 rounded-lg px-3 py-2 text-xs font-mono text-gray-350 outline-none select-all"
+                  />
+                  <button
+                    onClick={() => setShowAnon(!showAnon)}
+                    className="p-2 bg-gray-900 border border-gray-800 rounded-lg text-gray-400 hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                    title={showAnon ? "Hide Anon Key" : "Show Anon Key"}
+                  >
+                    {showAnon ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                  <button
+                    onClick={() => copyToClipboard(anonKey, setCopiedAnon, "Anon Key")}
+                    className="p-2 bg-gray-900 border border-gray-800 rounded-lg text-gray-400 hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                    title="Copy Anon Key"
+                  >
+                    {copiedAnon ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex border-b border-gray-800 mb-4">
+                <button
+                  onClick={() => setActiveGuide("ios")}
+                  className={`pb-2 pr-4 text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeGuide === "ios" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-500 hover:text-gray-300"}`}
+                >
+                  iOS Shortcuts Guide
+                </button>
+                <button
+                  onClick={() => setActiveGuide("tasker")}
+                  className={`pb-2 px-4 text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeGuide === "tasker" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-500 hover:text-gray-300"}`}
+                >
+                  Android Tasker Guide
+                </button>
+              </div>
+
+              {activeGuide === "ios" ? (
+                <div className="text-xs text-gray-400 space-y-3 leading-relaxed">
+                  <p>1. Open the <strong>Shortcuts</strong> app on iOS and go to the <strong>Automation</strong> tab.</p>
+                  <p>2. Create a new automation triggered when <strong>"I receive an SMS"</strong> containing words like <code>debited</code>, <code>sent</code>, or <code>Rs</code>.</p>
+                  <p>3. Add the <strong>"Get Contents of URL"</strong> action:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>URL: Paste the <strong>Webhook URL</strong> above.</li>
+                    <li>Method: <strong>POST</strong></li>
+                    <li>Headers:
+                      <div className="bg-black/30 p-2 rounded-lg font-mono text-[10px] text-gray-350 mt-1 border border-gray-850">
+                        apikey: <em>[Copy Anon Key]</em><br />
+                        Content-Type: application/json
+                      </div>
+                    </li>
+                    <li>Request Body: <strong>JSON</strong>
+                      <div className="bg-black/30 p-2 rounded-lg font-mono text-[10px] text-gray-350 mt-1 border border-gray-850">
+                        api_key: <em>[Copy Webhook API Key]</em><br />
+                        body: Choose <strong>"Shortcut Input"</strong> (Message Body)
+                      </div>
+                    </li>
+                  </ul>
+                  <p>4. Disable "Ask Before Running" so it runs silently in the background.</p>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-450 space-y-3 leading-relaxed">
+                  <p>1. Open <strong>Tasker</strong>, create a Profile triggered by <strong>Event</strong> → <strong>Phone</strong> → <strong>Received Text</strong>.</p>
+                  <p>2. Set <strong>Sender</strong> to your bank/UPI handles and <strong>Content</strong> to match keywords like <code>*debited*/*spent*/*sent*</code>.</p>
+                  <p>3. Create a task with action <strong>Net</strong> → <strong>HTTP Request</strong>:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Method: <strong>POST</strong></li>
+                    <li>URL: Paste the <strong>Webhook URL</strong> above.</li>
+                    <li>Headers:
+                      <div className="bg-black/30 p-2 rounded-lg font-mono text-[10px] text-gray-350 mt-1 border border-gray-850">
+                        apikey: <em>[Copy Anon Key]</em><br />
+                        Content-Type: application/json
+                      </div>
+                    </li>
+                    <li>Body:
+                      <div className="bg-black/30 p-2 rounded-lg font-mono text-[10px] text-gray-350 mt-1 border border-gray-850">
+                        {"{"}<br />
+                        &nbsp;&nbsp;"api_key": "<em>[Copy Webhook API Key]</em>",<br />
+                        &nbsp;&nbsp;"body": "%SMSRB"<br />
+                        {"}"}
+                      </div>
+                    </li>
+                  </ul>
+                  <p>4. Save the profile and make sure Tasker is enabled.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
