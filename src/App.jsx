@@ -9,6 +9,7 @@ import { Habits } from "./components/Habits";
 import { Auth } from "./components/Auth";
 import { FileText, Loader2 } from "lucide-react";
 import { useActivityNotifier } from "./hooks/useActivityNotifier";
+import { useTransactionNotifier } from "./hooks/useTransactionNotifier";
 import { ToastProvider } from "./components/Toaster";
 import { GlobalJobQueue } from "./components/GlobalJobQueue";
 
@@ -46,6 +47,7 @@ function App() {
   }, [currentTab]);
 
   useActivityNotifier();
+  useTransactionNotifier();
 
   if (loading) {
     return (

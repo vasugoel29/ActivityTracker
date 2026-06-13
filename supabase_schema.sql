@@ -167,3 +167,119 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 7. Add Realtime for the new tables
 ALTER PUBLICATION supabase_realtime ADD TABLE user_settings, incoming_sms;
 
+-- 8. Auto-parsing Trigger to process SMS alerts directly in the database
+CREATE OR REPLACE FUNCTION process_incoming_sms_trigger()
+RETURNS TRIGGER AS $$
+DECLARE
+  parsed_amount FLOAT;
+  parsed_vendor TEXT;
+  parsed_category TEXT;
+  parsed_necessity TEXT;
+  parsed_description TEXT;
+  clean_body TEXT;
+BEGIN
+  -- Normalize spacing
+  clean_body := regexp_replace(new.body, '\s+', ' ', 'g');
+
+  -- A. Extract Amount
+  -- Matches "Rs. 150", "Rs 150.00", "INR 1,500", "₹500", etc.
+  parsed_amount := (regexp_match(clean_body, '(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{2})?)', 'i'))[1]::text;
+  
+  IF parsed_amount IS NOT NULL THEN
+    parsed_amount := replace(parsed_amount, ',', '')::float;
+  END IF;
+
+  -- B. Extract Vendor/Merchant
+  -- Pattern A: "sent Rs.100 to VENDOR"
+  parsed_vendor := (regexp_match(clean_body, '(?:sent|paid|transferred|debited)\s+(?:Rs\.?|INR|₹)\s*[\d,.]+\s+to\s+([A-Za-z0-9\s&._#-]+?)(?:\s+on|\s+ref|\s+upi|\s+from|\s+a\/c|\.$)', 'i'))[1];
+  
+  -- Pattern B: "debited ... at VENDOR"
+  IF parsed_vendor IS NULL THEN
+    parsed_vendor := (regexp_match(clean_body, '(?:debited|spent|txn of)\s+(?:from\s+A\/c\s+[a-zA-Z0-9*]+\s*:\s*)?(?:Rs\.?|INR|₹)\s*[\d,.]+\s+(?:on\s+[^a-zA-Z]+)?(?:at|info:)\s*([A-Za-z0-9\s&._#-]+?)(?:\s+ref|\s+upi|\s+from|\s+a\/c|\.$)', 'i'))[1];
+  END IF;
+
+  -- Pattern C: "txn of Rs.100 at VENDOR"
+  IF parsed_vendor IS NULL THEN
+    parsed_vendor := (regexp_match(clean_body, '(?:txn|transaction)\s+of\s+(?:Rs\.?|INR|₹)\s*[\d,.]+\s+(?:at|to)\s+([A-Za-z0-9\s&._#-]+?)(?:\s+on|\s+ref|\s+upi|\.|$)', 'i'))[1];
+  END IF;
+
+  -- Pattern D: "spent Rs.100 at VENDOR"
+  IF parsed_vendor IS NULL THEN
+    parsed_vendor := (regexp_match(clean_body, 'spent\s+(?:Rs\.?|INR|₹)\s*[\d,.]+\s+(?:at|on|to)\s+([A-Za-z0-9\s&._#-]+)', 'i'))[1];
+  END IF;
+
+  -- Clean merchant name from common suffix noise
+  IF parsed_vendor IS NOT NULL THEN
+    parsed_vendor := trim(regexp_replace(parsed_vendor, '\b(ref|upi|txn|using|from|acct|balance|avail|avl)\b.*$', '', 'i'));
+  ELSE
+    parsed_vendor := 'Unknown Merchant';
+  END IF;
+
+  -- C. Infer Category based on merchant name
+  parsed_category := 'Other';
+  IF clean_body ~* 'swiggy|zomato|starbucks|mcdonalds|domino|pizza|restaurant|cafe|eats|food|dine|kitchen|bakery|deli|grocery|groceries|supermarket|instamart|blinkit|zepto' THEN
+    parsed_category := 'Food';
+  ELSIF clean_body ~* 'uber|ola|metro|fuel|petrol|shell|hpcl|bpcl|cabs|taxi|irctc|railway|train|bus|auto|toll|fastag' THEN
+    parsed_category := 'Transport';
+  ELSIF clean_body ~* 'amazon|flipkart|myntra|ajio|zara|h&m|retail|store|mall|shopping|clothes|shoes|boutique|superkalam' THEN
+    parsed_category := 'Shopping';
+  ELSIF clean_body ~* 'netflix|spotify|bookmyshow|hotstar|prime video|steam|playstation|nintendo|theatre|cinema|club|pub|bar|liquor' THEN
+    parsed_category := 'Entertainment';
+  ELSIF clean_body ~* 'electricity|water|rent|recharge|airtel|jio|vi|broadband|wifi|gas|maintenance|insurance' THEN
+    parsed_category := 'Utilities';
+  ELSIF clean_body ~* 'pharmacy|chemist|hospital|doctor|clinic|lab|apollo|medplus|dental|gym|fitness|workout' THEN
+    parsed_category := 'Health';
+  ELSIF clean_body ~* 'youtube premium|medium|openai|chatgpt|github|icloud|google one|adobe|canva|subscription' THEN
+    parsed_category := 'Subscriptions';
+  ELSIF clean_body ~* 'makemytrip|easemytrip|goibibo|airbnb|hotel|stay|flight|booking|trip|travel' THEN
+    parsed_category := 'Travel';
+  ELSIF clean_body ~* 'gift|giftcard|shagun|voucher|present' THEN
+    parsed_category := 'Gifts';
+  ELSIF clean_body ~* 'zerodha|groww|mutual fund|sip|stocks|etf|invest|coindcx|wazirx' THEN
+    parsed_category := 'Investments';
+  ELSIF clean_body ~* 'vendor|client|business|payroll|invoice|freelance|hosting|aws|gcp' THEN
+    parsed_category := 'Business Payments';
+  END IF;
+
+  -- D. Map Necessity
+  IF parsed_category IN ('Food', 'Transport', 'Utilities', 'Health', 'Investments', 'Business Payments') THEN
+    parsed_necessity := 'Need';
+  ELSE
+    parsed_necessity := 'Want';
+  END IF;
+
+  -- E. Insert into expenses table if valid amount was extracted
+  IF parsed_amount IS NOT NULL AND parsed_amount > 0 THEN
+    parsed_description := 'Auto-fetched from SMS: ' || parsed_vendor;
+    
+    INSERT INTO public.expenses (user_id, amount, category, description, necessity, type, date_string, timestamp)
+    VALUES (
+      new.user_id,
+      parsed_amount,
+      parsed_category,
+      parsed_description,
+      parsed_necessity,
+      'Personal',
+      to_char(now(), 'YYYY-MM-DD'),
+      new.created_at
+    );
+    
+    -- Auto-approve: mark SMS as processed immediately
+    new.processed := TRUE;
+  END IF;
+
+  RETURN new;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Fallback: If any error occurs, do not block insertion.
+    -- Leave processed = FALSE so it can be reviewed and manually logged in the UI.
+    new.processed := FALSE;
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_incoming_sms_insert
+  BEFORE INSERT ON public.incoming_sms
+  FOR EACH ROW EXECUTE FUNCTION public.process_incoming_sms_trigger();
+
+
